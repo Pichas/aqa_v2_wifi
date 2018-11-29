@@ -79,8 +79,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pbMakeMatrix, &QPushButton::clicked, this, &MainWindow::makeMatrix);
     connect(ui->pbDelMatrix, &QPushButton::clicked, this, &MainWindow::delMatrix);
 
-
-
+    ui->sbCount->setValue(SETTING_INI->value("LEDS/count",0).toInt());
+    ui->sbStart->setValue(SETTING_INI->value("LEDS/start",0).toInt());
+    ui->sbElementsInRow->setValue(SETTING_INI->value("LEDS/columns",0).toInt());
 
 }
 
@@ -129,7 +130,6 @@ void MainWindow::loadStatus()
 }
 
 void MainWindow::refreshActions()
-
 {    ui->cbEnTimers->setChecked(device->isEnTimers());
      ui->actRelay0->setChecked(device->isRelay(0));
      ui->actRelay1->setChecked(device->isRelay(1));
@@ -273,6 +273,11 @@ void MainWindow::makeMatrix()
         }
     }
     ui->ledGrid->setSpacing(0);
+
+    SETTING_INI->setValue("LEDS/count",ui->sbCount->value());
+    SETTING_INI->setValue("LEDS/start",ui->sbStart->value());
+    SETTING_INI->setValue("LEDS/columns",ui->sbElementsInRow->value());
+
 }
 
 void MainWindow::delMatrix()
