@@ -60,6 +60,7 @@ bool connector::writeData(QByteArray data)
 {
     if(socket && socket->state() == QAbstractSocket::ConnectedState)
     {
+        qApp->processEvents();
         socket->write(data); //write the data itself
         return socket->waitForBytesWritten();
     }

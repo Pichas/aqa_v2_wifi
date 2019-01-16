@@ -134,6 +134,10 @@ int main(void)
   HAL_UART_Transmit(&huart1, SERVER, sizeof(SERVER) - 1, 10);
   HAL_Delay(1000);
   
+  //off relay
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);
+  
   HAL_UART_Receive_IT(&huart1, &uartRX, sizeof(uartRX));
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */

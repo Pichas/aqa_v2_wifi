@@ -167,10 +167,25 @@ void ledsOff(uint32_t* delayTime){
 
     ledCntrl.setUserColor(i, red, green, blue); //записать в буфер
   }
-  *delayTime = 2; //выставить скорость измменения
+  *delayTime = 1; //выставить скорость измменения
 }
 
+void ledsOn(uint32_t* delayTime){
+  uint8_t red, green, blue;
+  for (int i = 0 ; i <= ledCntrl.ledCount ; i++){
+    red = ledCntrl.getLedX(i).red; //получить текущие значения цветов
+    green = ledCntrl.getLedX(i).green;
+    blue = ledCntrl.getLedX(i).blue;
+    
+    //изменить по усмотрению
+    if(red < 255 ) red++;
+    if(green < 255 ) green++;
+    if(blue < 255 ) blue++;
 
+    ledCntrl.setUserColor(i, red, green, blue); //записать в буфер
+  }
+  *delayTime = 1; //выставить скорость измменения
+}
 
 
 void sunrise(uint32_t* delayTime){
@@ -204,14 +219,6 @@ void sunset(uint32_t* delayTime){
 }
 
 
-
-void ledsOn(uint32_t* delayTime){
-  for (int i = 0 ; i <= ledCntrl.ledCount ; i++){
-    ledCntrl.setUserColor(i, 255, 255, 255); //
-  }
-  
-  *delayTime = 5; 
-}
 
 
 

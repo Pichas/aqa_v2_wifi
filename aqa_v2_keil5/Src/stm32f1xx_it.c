@@ -276,16 +276,16 @@ void TIM4_IRQHandler(void)
     if((timerTest->time.Hours == curTime.Hours) && (timerTest->time.Minutes == curTime.Minutes) && (timerTest->weekDay & (1 << (curDate.WeekDay - 1)))){ //esli nastalo vremia timera
       switch (timerTest->type){
         case OFF_0:
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
-        break;
-        case ON_0:
           HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
         break;
+        case ON_0:
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+        break;
         case OFF_1:
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);
         break;
         case ON_1:
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);
         break;
         case SET_EFFECT:
           effectIndex = timerTest->effNum;
@@ -332,7 +332,6 @@ void RXBUF_work(){
     HAL_UART_Transmit_IT(&huart1, uartTX_buf, sizeof(uartTX_buf));
     
   }
-  
   
   
   if (uartRX_buf[0] == '+'){ //rx data packet
@@ -482,15 +481,15 @@ void RXBUF_work(){
       
       //relay
       case 'X':{
-          HAL_GPIO_WritePin(GPIOB, 1 << (12 + uartRX_buf[startPos + 1] - 0x30), (GPIO_PinState)(uartRX_buf[startPos + 2] - 0x30));
+          HAL_GPIO_WritePin(GPIOB, 1 << (12 + uartRX_buf[startPos + 1] - 0x30), ((GPIO_PinState)(uartRX_buf[startPos + 2] - 0x30))^0x01);
       break;}
       
       //get all info
       case 'Z':{
         uartTX_buf[0] = 'Z'; //OK
         uartTX_buf[1] = enTimers + 0x30;
-        uartTX_buf[2] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12) + 0x30;
-        uartTX_buf[3] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13) + 0x30;
+        uartTX_buf[2] = (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12))^0x01 + 0x30;
+        uartTX_buf[3] = (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13))^0x01 + 0x30;
         uartTX_buf[4] = effectIndex + 0x30;
       
         uartTX_buf[48] = 0x0D;//cr

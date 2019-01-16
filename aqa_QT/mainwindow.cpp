@@ -254,6 +254,7 @@ void MainWindow::importTimers()
 void MainWindow::makeMatrix()
 {
     delMatrix();//удалить старые
+    this->resize(662, 437);
 
     const static QSize btnSize = QSize(20, 20);
     int row = 0;
@@ -266,7 +267,7 @@ void MainWindow::makeMatrix()
 
         connect(b, &QPushButton::clicked, this, &MainWindow::pickColor);
 
-        ui->ledGrid->addWidget(b,row, column++);
+        ui->ledGrid->addWidget(b, row, column++);
         if (column >= ui->sbElementsInRow->value()){
             column = 0;
             row++;
