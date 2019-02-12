@@ -14,7 +14,7 @@
 #include "addtimerwin.h"
 
 
-#include "e:/_Work/QT/lib/mySet/myset.h"
+#include "mySet/myset.h"
 
 class driver : public QObject
 {
@@ -39,7 +39,7 @@ public:
     bool isEnTimers(){return enTimers;}
     bool isRelay(int n){return relay[n];}
 
-    int getEffectIndex() {return effectIndex;}
+    int effect() {return effectIndex;}
 
     void addTimer(QString timerString);
     void removeTimer(int n);

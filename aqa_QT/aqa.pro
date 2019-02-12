@@ -9,6 +9,7 @@ QT       += core gui network sql
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = aqa
+
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
@@ -27,6 +28,15 @@ OBJECTS_DIR = build
 MOC_DIR = build
 UI_DIR = build
 
+ICON = ico/main.ico
+win32:RC_ICONS += ico/main.ico
+
+VERSION = 0.1.0.0
+QMAKE_TARGET_COMPANY = home
+QMAKE_TARGET_PRODUCT = aqa
+QMAKE_TARGET_DESCRIPTION = no
+QMAKE_TARGET_COPYRIGHT = no
+
 CONFIG += c++17
 QMAKE_CXXFLAGS += -std=c++17
 
@@ -34,28 +44,24 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     driver.cpp \
-    ../../../lib/mySet/myset.cpp \
     timers.cpp \
     connector.cpp \
     timersmodeltable.cpp \
-    addtimerwin.cpp
+    addtimerwin.cpp \
+    mySet/myset.cpp
 
 HEADERS += \
         mainwindow.h \
     driver.h \
-    ../../../lib/mySet/myset.h \
     timers.h \
     connector.h \
     timersmodeltable.h \
-    addtimerwin.h
+    addtimerwin.h \
+    mySet/myset.h
 
 FORMS += \
         mainwindow.ui \
     addtimerwin.ui
 
 
-win32 {
-    RC_FILE += file.rc
-    OTHER_FILES += file.rc version.h
-}
 

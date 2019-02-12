@@ -8,7 +8,7 @@
 #include <QDebug>
 
 
-#include "e:/_Work/QT/lib/mySet/myset.h"
+#include "mySet/myset.h"
 
 class connector : public QObject
 {

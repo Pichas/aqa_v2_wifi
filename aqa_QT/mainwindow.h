@@ -43,17 +43,23 @@ private:
     void delMatrix();
     QMap<QPushButton*, QColor> allLeds;
 
+    QColor brushColor;
 
 
 private slots:
-    void customMode();
+    void uploadToDevice();
     void loadStatus();
     void refreshActions();
 
     void exportTimers();
     void importTimers();
 
-    void pickColor();
+    void setLedColor();
+    void pickBrushColor();
+
+    void exportLedMap();
+    void importLedMap();
+
 
 
 

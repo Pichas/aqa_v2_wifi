@@ -40,13 +40,18 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actSetUserColor,&QAction::triggered, [&]{
             static QColor color = Qt::white;
             color = QColorDialog::getColor(color, this, "Выбор цвета");
-            device->setEffect(4);
+            if (device->effect() != 4) device->setEffect(4);
             device->setUserColor(0, color.toRgb().red(), color.toRgb().green(), color.toRgb().blue());
             ui->menu_7->setStyleSheet("QMenu::item { background-color: " + color.name() + "; }");
         });
 
 
-    connect(ui->actCustomMode,  &QAction::triggered, [&]{device->setEffect(5); this->customMode();});
+    connect(ui->actCustomMode,  &QAction::triggered, [&]{device->setEffect(5);});
+
+    connect(ui->pbUpload,  &QPushButton::clicked, this, &MainWindow::uploadToDevice);
+    connect(ui->pbPickColor,  &QPushButton::clicked, this, &MainWindow::pickBrushColor);
+    connect(ui->pbSave,  &QPushButton::clicked, this, &MainWindow::exportLedMap);
+    connect(ui->pbLoad,  &QPushButton::clicked, this, &MainWindow::importLedMap);
 
 
     //timers
@@ -69,10 +74,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->actRefresh->setShortcut(Qt::Key_F5);
     ui->actExit->setShortcut(Qt::Key_F12);
-
-
-
-
 
 
     //matrix
@@ -106,15 +107,13 @@ void MainWindow::setIPPort()
 }
 
 
-
-
-
-void MainWindow::customMode()
+void MainWindow::uploadToDevice()
 {
-    if (device->getEffectIndex() != 5) return; //выйти, если не тот эффект
     ui->pbarUploading->setMaximum(allLeds.count() - 1);
 
     for (int i = 0 ; i < allLeds.count() ; i++){
+        if (device->effect() != 5) break; //выйти, если не тот эффект
+
         ui->pbarUploading->setValue(i);
         QColor c = allLeds.value(allLeds.keys().at(i));
         QThread::msleep(150);
@@ -134,12 +133,12 @@ void MainWindow::refreshActions()
      ui->actRelay0->setChecked(device->isRelay(0));
      ui->actRelay1->setChecked(device->isRelay(1));
 
-     ui->actLedOff->setChecked(device->getEffectIndex() == 0);
-     ui->actSunrise->setChecked(device->getEffectIndex() == 1);
-     ui->actSunset->setChecked(device->getEffectIndex() == 2);
-     ui->actLedOn->setChecked(device->getEffectIndex() == 3);
-     ui->actSetUserColor->setChecked(device->getEffectIndex() == 4);
-     ui->actCustomMode->setChecked(device->getEffectIndex() == 5);
+     ui->actLedOff->setChecked(device->effect() == 0);
+     ui->actSunrise->setChecked(device->effect() == 1);
+     ui->actSunset->setChecked(device->effect() == 2);
+     ui->actLedOn->setChecked(device->effect() == 3);
+     ui->actSetUserColor->setChecked(device->effect() == 4);
+     ui->actCustomMode->setChecked(device->effect() == 5);
 }
 
 void MainWindow::exportTimers()
@@ -204,9 +203,6 @@ void MainWindow::exportTimers()
 
 void MainWindow::importTimers()
 {
-    QString loadedTimer;
-
-
     QString fileName = QFileDialog::getOpenFileName(this,
                                 tr("Открыть файл с таймерами"),
                                 QDir::homePath(),
@@ -225,12 +221,11 @@ void MainWindow::importTimers()
                 return;
             }
 
-
             int dataCount;
             stream >> dataCount;
-            qDebug() << dataCount;
 
             for (int i = 0; i < dataCount ; i++){
+                QString loadedTimer;
                 stream >> loadedTimer;
                 device->addTimer(loadedTimer);
                 QThread::msleep(150);
@@ -260,12 +255,13 @@ void MainWindow::makeMatrix()
     int row = 0;
     int column = 0;
 
+
     for (int i = ui->sbStart->value() ; i < ui->sbCount->value() ; i++){
         QPushButton* b = new QPushButton(QString::number(i), this);
         allLeds.insert(b, QColor(Qt::black));
         b->setFixedSize(btnSize);
 
-        connect(b, &QPushButton::clicked, this, &MainWindow::pickColor);
+        connect(b, &QPushButton::clicked, this, &MainWindow::setLedColor);
 
         ui->ledGrid->addWidget(b, row, column++);
         if (column >= ui->sbElementsInRow->value()){
@@ -290,14 +286,101 @@ void MainWindow::delMatrix()
 }
 
 
-void MainWindow::pickColor()
+void MainWindow::setLedColor()
 {
     QPushButton* b = qobject_cast<QPushButton*> (QObject::sender());
 
-    const QColor color = QColorDialog::getColor(allLeds[b], this, "Выбор цвета");
-    allLeds[b] = color;
-    b->setStyleSheet("background-color: " + color.name() + ";");
-    QCoreApplication::processEvents();
-    customMode();
+    allLeds[b] = brushColor;
+    b->setStyleSheet("background-color: " + brushColor.name() + ";");
+
+    device->setUserColor(b->text().toInt(), allLeds[b].red(), allLeds[b].green(), allLeds[b].blue());
+}
+
+void MainWindow::pickBrushColor()
+{
+    QPushButton* b = qobject_cast<QPushButton*> (QObject::sender());
+
+    QColor returnColor = QColorDialog::getColor(brushColor, this, "Выбор цвета");
+    if (returnColor.isValid()) brushColor = returnColor;
+    b->setStyleSheet("background-color: " + brushColor.name() + ";");
+}
+
+void MainWindow::exportLedMap()
+{
+    if(allLeds.isEmpty()) return;
+
+    QString fileName = QFileDialog::getSaveFileName(this,
+                                                    tr("Открыть файл с картой"),
+                                                    QDir::homePath(),
+                                                    tr("Файл карт (*.map);;Все файлы (*)"));
+
+    if (!fileName.isEmpty()){
+        QFile file(fileName);
+        if(file.open(QIODevice::WriteOnly)){
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_4_2);
+
+            stream << QString("Аквариумная карта");
+            stream << allLeds.count(); //записать количество записей
+
+
+            for (QPushButton* b : allLeds.keys()){
+                stream << b->text() << allLeds[b];
+            }
+
+            if(stream.status() != QDataStream::Ok){
+                QMessageBox::warning(nullptr, "Экспорт карты", "Ошибка экспорта");
+            }else{
+                QMessageBox::information(nullptr, "Экспорт карты", "Экспорт завершен успешно");
+            }
+        }
+        file.close();
+    }
+
+}
+
+void MainWindow::importLedMap()
+{
+    if(allLeds.isEmpty()) return;
+
+    QString fileName = QFileDialog::getOpenFileName(this,
+                                tr("Открыть файл с картой"),
+                                QDir::homePath(),
+                                tr("Файл карт (*.map);;Все файлы (*)"));
+    if (!fileName.isEmpty()){
+        QFile file(fileName);
+        if(file.open(QIODevice::ReadOnly)){
+
+            QDataStream stream(&file);
+            stream.setVersion (QDataStream::Qt_4_2) ;
+
+            QString check;
+            stream >> check;
+            if (check != "Аквариумная карта") {
+                QMessageBox::warning(nullptr, "Импорт карты", "Это не файл карт");
+                return;
+            }
+
+            int dataCount;
+            stream >> dataCount;
+
+            for (int i = 0; i < dataCount ; i++){
+                QString ledName;
+                stream >> ledName;
+                for (QPushButton* b : allLeds.keys()){
+                    if (b->text() == ledName){
+                        stream >> allLeds[b];
+                        b->setStyleSheet("background-color: " + allLeds[b].name() + ";");
+                    }
+                }
+                QCoreApplication::processEvents();
+            }
+
+            if(stream.status() != QDataStream::Ok){
+                QMessageBox::warning(nullptr, "Импорт карты", "Ошибка импорта");
+            }
+            file.close();
+        }
+    }
 }
 
