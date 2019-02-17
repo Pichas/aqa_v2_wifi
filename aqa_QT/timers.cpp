@@ -43,7 +43,7 @@ void timers::startLoading()
 
 void timers::getData(QString msg)
 {
-    if (msg[0] == 'T'){ //
+    if (msg[0] == 'T'){ //значение таймера
         model->insertRow(QTime((msg[1].toLatin1() - 0x30) * 10 + msg[2].toLatin1() - 0x30,
                             (msg[3].toLatin1() - 0x30) * 10 + msg[4].toLatin1() - 0x30),
                 msg[5].toLatin1(),
@@ -51,7 +51,7 @@ void timers::getData(QString msg)
                 msg[7].toLatin1() - 0x30);
         emit nextStep();
     }
-    if (msg[0] == 'E'){ //вывод даты времени
+    if (msg[0] == 'E'){ //ошибка
         emit errorTimerNum();
     }
 }

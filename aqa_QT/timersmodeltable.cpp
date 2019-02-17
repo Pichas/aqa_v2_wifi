@@ -98,6 +98,10 @@ void timersModelTable::insertRow(QTime startTime, char daysOfWeek, char type, in
 void timersModelTable::clear()
 {
     beginResetModel();
+
+    for(timer* t : allTimers)
+        delete t;
+
     allTimers.clear();
     rows = 0;
     endResetModel();
