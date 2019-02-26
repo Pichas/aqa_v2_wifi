@@ -1,9 +1,18 @@
 #include "driver.h"
 
-driver::driver(QObject *parent) : QObject(parent)
+driver::driver(QTableView *tview, QObject *parent) : QObject(parent)
 {
-    cntr.reset(new connector());
+    sender = new drvSender(this);
+    connect(sender, &drvSender::sigSendStatus, [&](QString msg){emit sendMessage(msg);});
+    connect(sender, &drvSender::sigSendResultData, this, &driver::getData);
+
     timersTable.reset(new timersModelTable());
+    tview->setModel(timersTable.data());
+    tview->setColumnWidth(0,40);
+    tview->setColumnWidth(1,50);
+    tview->setColumnWidth(2,150);
+    tview->setColumnWidth(3,250);
+    tview->setColumnWidth(4,10);
 }
 
 driver::~driver()
@@ -11,17 +20,10 @@ driver::~driver()
 
 }
 
-void driver::conn()
+void driver::reconn()
 {
-    cntr.reset(new connector());
-    if (cntr->conn()){
-        connect(cntr.data(), &connector::sendResult, this, &driver::getData);
-        sendMessage("Соединение установлено");
-    }else{
-        sendMessage("Ошибка соединения");
-    }
+    sender->restartSender();
 }
-
 
 void driver::getData(QString msg)
 {
@@ -35,7 +37,8 @@ void driver::getData(QString msg)
         msg.insert(4, ':');
         msg.insert(2, ':');
 
-        QMessageBox::information(nullptr, "Время в контроллере", msg);
+        QMessageBox::information(nullptr, "Время в контроллере", "Установленное: " + msg + "\r\n"
+                                 + "Текущее: " + QDateTime::currentDateTime().toString("dd.MM.yy HH:mm:ss ") + QString::number(QDate::currentDate().dayOfWeek()));
     }
 
     if (msg[0] == 'Z'){ //вывод статуса контроллера
@@ -44,22 +47,31 @@ void driver::getData(QString msg)
         relay[1] = msg[3] == '0' ? false : true;
         effectIndex = msg[4].toLatin1() - 0x30;
     }
+
+    if (msg[0] == 'T'){ //значение таймера
+        timersTable->insertRow(QTime((msg[1].toLatin1() - 0x30) * 10 + msg[2].toLatin1() - 0x30,
+                            (msg[3].toLatin1() - 0x30) * 10 + msg[4].toLatin1() - 0x30),
+                msg[5].toLatin1(),
+                msg[6].toLatin1(),
+                msg[7].toLatin1() - 0x30);
+
+        QString buf;
+        buf.sprintf("T%02d", timersTable->rowCount());
+        sender->send(buf); //load next timer
+    }
 }
-
-
-
 
 
 void driver::getStatus()
 {
-    cntr->send("Z");
+    sender->send("Z");
 }
 
 
 
 void driver::getTimeFromDevice()
 {
-    cntr->send("G");
+    sender->send("G");
 }
 
 void driver::syncTimeToDevice()
@@ -67,24 +79,24 @@ void driver::syncTimeToDevice()
     QString sync = "S" + QDateTime::currentDateTime().toString("HHmmssddMMyy") +
             QString::number(QDate::currentDate().dayOfWeek());
 
-    cntr->send(sync);
+    sender->send(sync);
 }
 
 void driver::setRelayStatus(int n, int s)
 {
     relay[n] = s;
-    cntr->send("X" + QString::number(n) + QString::number(s));
+    sender->send("X" + QString::number(n) + QString::number(s));
 }
 
 void driver::setEnTimers(int e)
 {
-    cntr->send("J" + QString::number(e).toLatin1());
+    sender->send("J" + QString::number(e).toLatin1());
 }
 
 void driver::setEffect(int e)
 {
     effectIndex = e;
-    cntr->send("E" + QString::number(e));
+    sender->send("E" + QString::number(e));
     emit sendEffectChanged();
 }
 
@@ -92,36 +104,26 @@ void driver::setUserColor(int n, int r, int g, int b)
 {
     QString buf;
     buf.sprintf("M%03d%03d%03d%03d", n, r, g, b);
-    cntr->send(buf);
+    sender->send(buf);
 }
 
 void driver::addTimer(QString timerString)
 {
-    cntr->send(timerString);
+    sender->send(timerString);
 }
-
-
-
 
 
 void driver::removeTimer(int n)
 {
     QString buf;
     buf.sprintf("R%02d", n);
-    cntr->send(buf);
+    sender->send(buf);
 }
 
-void driver::loadTimers(QTableView *tview)
+void driver::loadTimers()
 {
-    tview->setModel(timersTable.data());
-    tview->setColumnWidth(0,40);
-    tview->setColumnWidth(1,50);
-    tview->setColumnWidth(2,150);
-    tview->setColumnWidth(3,250);
-    tview->setColumnWidth(4,10);
-
-    timers* timersLoader = new timers(cntr.data(), timersTable.data(), nullptr);
-    timersLoader->startLoading();
+    timersTable->clear();
+    sender->send("T00"); //start loading
 }
 
 

@@ -7,23 +7,23 @@
 #include <QStateMachine>
 #include <QMessageBox>
 #include <QTableView>
-#include "connector.h"
-#include "timersmodeltable.h"
-#include "timers.h"
 #include <QInputDialog>
+
+
+
 #include "addtimerwin.h"
-
-
+#include "timersmodeltable.h"
 #include "mySet/myset.h"
+#include "drvSender.h"
 
 class driver : public QObject
 {
     Q_OBJECT
 public:
-    explicit driver(QObject *parent = nullptr);
+    explicit driver(QTableView *tview, QObject *parent = nullptr);
     ~driver();
 
-    void conn();
+    void reconn();
 
     void getStatus();
 
@@ -43,7 +43,7 @@ public:
 
     void addTimer(QString timerString);
     void removeTimer(int n);
-    void loadTimers(QTableView* tview);
+    void loadTimers();
 
 
 private:
@@ -51,7 +51,8 @@ private:
     bool relay[2];
     int effectIndex;
 
-    QScopedPointer<connector> cntr;
+    drvSender* sender;
+
     QScopedPointer<timersModelTable> timersTable;
 
 signals:

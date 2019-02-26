@@ -8,9 +8,10 @@ void ledsOff(uint32_t* delayTime); //потушить ленту
 void sunrise(uint32_t* delayTime); //восход
 void sunset(uint32_t* delayTime); //закат
 void ledsOn(uint32_t* delayTime); //потушить ленту
-
 void manual(uint32_t* delayTime); //
 void custom(uint32_t* delayTime); //
+
+void addEffect(pfn_effect); //добавить эффект в массив эфектов дл€ вывода
 
 uint16_t uCustomNum = 0;
 uint8_t uRed = 0;
@@ -19,14 +20,13 @@ uint8_t uBlue = 0;
 
 
 //other
-void setPalitColor( uint16_t num, enum palit p, uint8_t bright); //установить цвет из палитры
-void setUserColor( uint16_t num, uint8_t red, uint8_t green, uint8_t blue); //RGB
+void setUserColor(uint16_t num, uint8_t red, uint8_t green, uint8_t blue); //RGB
+ledx getLedX(uint16_t num); //получить светодиод со всеми данными
+
 uint32_t colorConvToLED(uint8_t red, uint8_t green, uint8_t blue); //конвертировать RGB в массив 24 байта дл€ ленты
 void colorConvToRGB(ledx* led); //из массива в RGB
 
-ledx getLedX(uint16_t num); //получить светодиод со всеми данными
 
-void addEffect(pfn_effect); //добавить эффект в массив эфектов дл€ вывода
 
 
 //vars
@@ -38,24 +38,16 @@ effects effAr; //эффекты
 ledsArray* init(uint16_t ledCount){
   ledCntrl.ledCount = ledCount - 1; // количество светодиодов в ленте
   ledCntrl.getLedX = &getLedX; //инициализаци€ указателей
-  ledCntrl.setPalitColor = &setPalitColor;
   ledCntrl.setUserColor = &setUserColor;
   
   ledCntrl.BufArray = (uint8_t*)malloc((PREAMBLESIZE+ledCount*24)*sizeof(uint8_t)); //выделение динамической пам€ти. необходимо чтобы переменна€ Heap_Size была правильно установлена.
   ledCntrl.BufSize = (PREAMBLESIZE+ledCount*24)*sizeof(uint8_t); //размер массива
   
-  if (!ledCntrl.BufArray) _Error_Handler(__FILE__, __LINE__); //если пам€ть не выделена уити с ошибкой
+  if (!ledCntrl.BufArray) Error_Handler(); //если пам€ть не выделена уити с ошибкой
 
   memset((uint8_t*)ledCntrl.BufArray, DOWN, ledCntrl.BufSize);//led off
   memset((uint8_t*)ledCntrl.BufArray, 0,    PREAMBLESIZE);//reset signal
   
-  
-//  for (int i = 0 ; i < ledCntrl.BufSize ; i++){ //заполнить 
-//    if (i<PREAMBLESIZE) ledCntrl.BufArray[i] = 0; //первые элементы нул€ми дл€ сброса ленты при выводе
-//    else ledCntrl.BufArray[i] = DOWN; //это лед нули. будет черный цвет
-//  }
-  
-
   
   //инициализаци€ массива эфектов
   effAr.count = 0;
@@ -76,50 +68,36 @@ ledsArray* getLedControl(void){
 }
 
 
-void addEffect(pfn_effect nameEff){
-  effAr.count++;
-  effAr.arr = (pfn_effect*)realloc(effAr.arr, effAr.count * sizeof(pfn_effect)); //изменить размер выделенной пам€ти дл€ масива эфектов
-  
-  if (!effAr.arr) _Error_Handler(__FILE__, __LINE__); //если пам€ть не выделена уити с ошибкой
-
-  effAr.arr[effAr.count - 1] = nameEff; //в новую €чейку вписать эффект
-}
-
-
-pfn_effect getEffect(uint8_t num){
+pfn_effect runEffect(uint8_t num){
   return effAr.arr[num % effAr.count]; //получить указатель на функцию с эфектом по индексу
 }
 uint8_t getEffectCount(void){
   return effAr.count; 
 }
 
+void setUserParams(uint16_t num, uint8_t red, uint8_t green, uint8_t blue){
+  uCustomNum = num;
+  uRed = red;
+  uGreen = green;
+  uBlue = blue;
+}
+
 
 //private func
-void setPalitColor( uint16_t num, enum palit p, uint8_t bright){
-  ledx led = getLedX(num); //получить светодиод из буфера
-  uint32_t mask = 1 << 23;
+void addEffect(pfn_effect nameEff){
+  effAr.count++;
+  effAr.arr = (pfn_effect*)realloc(effAr.arr, effAr.count * sizeof(pfn_effect)); //изменить размер выделенной пам€ти дл€ масива эфектов
   
-  for (int i = 0 ; i < 24 ; i++){
-    *(led.ptr + i) = mask & p ? UP : DOWN; //заполнение буфера данными
-    mask >>= 1; //следующий бит
-  }
+  if (!effAr.arr) Error_Handler(); //если пам€ть не выделена уити с ошибкой
+
+  effAr.arr[effAr.count - 1] = nameEff; //в новую €чейку вписать эффект
 }
 
-void setUserColor( uint16_t num, uint8_t red, uint8_t green, uint8_t blue){
-  ledx led = getLedX(num);
-  uint32_t p = colorConvToLED(red, green, blue); //сконвертировать RGB в массив бит дл€ вывода на ленту
-  uint32_t mask = 1 << 23;
-  
-  for (int i = 0 ; i < 24 ; i++){
-    *(led.ptr + i) = mask & p ? UP : DOWN;
-    mask >>= 1;
-  }
-}
+
 
 uint32_t colorConvToLED(uint8_t red, uint8_t green, uint8_t blue){
   return (red<<redShift | green<<greenShift | blue<<blueShift);
 }
-
 
 void colorConvToRGB(ledx* led){
   uint32_t colorBit = 0;
@@ -133,6 +111,16 @@ void colorConvToRGB(ledx* led){
   led->blue  =   (colorBit >> blueShift)    & 255;
 }
 
+void setUserColor( uint16_t num, uint8_t red, uint8_t green, uint8_t blue){
+  ledx led = getLedX(num);
+  uint32_t palette = colorConvToLED(red, green, blue); //сконвертировать RGB в массив бит дл€ вывода на ленту
+  uint32_t mask = 1 << 23;
+  
+  for (int i = 0 ; i < 24 ; i++){
+    *(led.ptr + i) = mask & palette ? UP : DOWN;
+    mask >>= 1;
+  }
+}
 
 ledx getLedX(uint16_t num){
   ledx ledX = {ledCntrl.BufArray + PREAMBLESIZE, //позици€ в массиве + смещение нулей. крч укажет на нулевой светодиод
@@ -149,7 +137,6 @@ ledx getLedX(uint16_t num){
 
   return ledX;
 }
-
 
 
 //effects
@@ -196,8 +183,8 @@ void sunrise(uint32_t* delayTime){
     blue = ledCntrl.getLedX(i).blue;
     
     if(red < 255) red++;
-    if(red > 255 * 0.8 && green < 255) green++;
-    if(red > 255 * 0.8 && green > 255 * 0.8 && blue < 255) blue++;
+    if(red > 255 * 0.2 && green < 255) green++;
+    if(red > 255 * 0.2 && green > 255 * 0.2 && blue < 255) blue++;
     ledCntrl.setUserColor(i, red, green, blue);
   }
   *delayTime = 6000;
@@ -211,8 +198,8 @@ void sunset(uint32_t* delayTime){
     blue = ledCntrl.getLedX(i).blue;
     
     if(blue > 0 ) blue--;
-    if(blue < 255 * 0.2 && green > 0) green--;
-    if(blue < 255 * 0.2 && green < 255 * 0.2 && red > 0) red--;
+    if(blue < 255 * 0.8 && green > 0) green--;
+    if(blue < 255 * 0.8 && green < 255 * 0.8 && red > 0) red--;
     ledCntrl.setUserColor(i, red, green, blue);
   }
   *delayTime = 6000;

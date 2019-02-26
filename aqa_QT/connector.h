@@ -19,10 +19,10 @@ public:
 
     bool conn();
     void send(QString msg);
+    QString lastCommand() const {return command;}
 
 private:
-
-    QUrl mUrl;
+    QString command;
     QScopedPointer<QTcpSocket>socket;
 
 signals:

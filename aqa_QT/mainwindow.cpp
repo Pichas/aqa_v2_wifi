@@ -6,21 +6,17 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    device.reset(new driver(this));
+
+    device.reset(new driver(ui->tvAllTimers, this));
+
     connect(device.data(), &driver::sendMessage, ui->statusBar, &QStatusBar::showMessage);
     connect(device.data(), &driver::sendEffectChanged, this, &MainWindow::refreshActions);
 
     connect(ui->pbExport,  &QPushButton::clicked, this, &MainWindow::exportTimers);
     connect(ui->pbImport,  &QPushButton::clicked, this, &MainWindow::importTimers);
 
-
-
     connect(ui->actIPPort, &QAction::triggered, this, &MainWindow::setIPPort);
-    connect(ui->actConnect, &QAction::triggered, [this]{
-        device->conn();
-        this->loadStatus();        //обновить интерфейс
-    });
-
+    connect(ui->actConnect, &QAction::triggered, [this]{device->reconn();});
 
 
     connect(ui->actGetTime, &QAction::triggered, [&]{device->getTimeFromDevice();});
@@ -59,18 +55,17 @@ MainWindow::MainWindow(QWidget *parent) :
         QScopedPointer<addTimerWin> win(new addTimerWin());
         connect(win.data(), &addTimerWin::sendStringTimer, device.data(), &driver::addTimer);
         win->exec();
-        device->loadTimers(ui->tvAllTimers); //обновить таймеры
+        device->loadTimers(); //обновить таймеры
     });
 
     connect(ui->pbDelTimer, &QPushButton::clicked, [&]{
         if (ui->tvAllTimers->selectionModel() && ui->tvAllTimers->selectionModel()->hasSelection())
             device->removeTimer(ui->tvAllTimers->selectionModel()->selectedRows().at(0).data().toInt());
-        device->loadTimers(ui->tvAllTimers); //обновить таймеры
+        device->loadTimers(); //обновить таймеры
     });
 
 
     connect(ui->actRefresh,  &QAction::triggered, this, &MainWindow::loadStatus);
-
 
     ui->actRefresh->setShortcut(Qt::Key_F5);
     ui->actExit->setShortcut(Qt::Key_F12);
@@ -84,6 +79,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->sbStart->setValue(SETTING_INI->value("LEDS/start",0).toInt());
     ui->sbElementsInRow->setValue(SETTING_INI->value("LEDS/columns",0).toInt());
 
+
+    QTimer::singleShot(1000, this, &MainWindow::loadStatus); //load data
 }
 
 MainWindow::~MainWindow()
@@ -109,14 +106,10 @@ void MainWindow::setIPPort()
 
 void MainWindow::uploadToDevice()
 {
-    ui->pbarUploading->setMaximum(allLeds.count() - 1);
-
     for (int i = 0 ; i < allLeds.count() ; i++){
         if (device->effect() != 5) break; //выйти, если не тот эффект
 
-        ui->pbarUploading->setValue(i);
         QColor c = allLeds.value(allLeds.keys().at(i));
-        QThread::msleep(150);
         device->setUserColor(allLeds.keys().at(i)->text().toInt(), c.red(), c.green(),c.blue());
     }
 }
@@ -125,7 +118,7 @@ void MainWindow::loadStatus()
 {
     device->getStatus();
     QTimer::singleShot(50, this, &MainWindow::refreshActions);        // обновить элементы отображения
-    QTimer::singleShot(50, [&]{device->loadTimers(ui->tvAllTimers);});        // обновить список таймеров
+    QTimer::singleShot(50, [&]{device->loadTimers();});        // обновить список таймеров
 }
 
 void MainWindow::refreshActions()
@@ -228,8 +221,6 @@ void MainWindow::importTimers()
                 QString loadedTimer;
                 stream >> loadedTimer;
                 device->addTimer(loadedTimer);
-                QThread::msleep(150);
-                QCoreApplication::processEvents();
             }
 
             if(stream.status() != QDataStream::Ok){
@@ -251,7 +242,7 @@ void MainWindow::makeMatrix()
     delMatrix();//удалить старые
     this->resize(662, 437);
 
-    const static QSize btnSize = QSize(20, 20);
+    const static QSize btnSize = QSize(22, 22);
     int row = 0;
     int column = 0;
 
@@ -373,7 +364,6 @@ void MainWindow::importLedMap()
                         b->setStyleSheet("background-color: " + allLeds[b].name() + ";");
                     }
                 }
-                QCoreApplication::processEvents();
             }
 
             if(stream.status() != QDataStream::Ok){

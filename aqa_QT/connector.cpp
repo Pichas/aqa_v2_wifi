@@ -2,9 +2,6 @@
 
 connector::connector(QObject *parent) : QObject(parent)
 {
-    mUrl.setHost(SETTING_INI->value("CONNECT/IP", "127.0.0.1").toString());
-    mUrl.setPort(SETTING_INI->value("CONNECT/Port", 5555).toInt());
-
     socket.reset(new QTcpSocket(nullptr));
 }
 
@@ -26,21 +23,22 @@ bool connector::conn()
 
     socket.reset(new QTcpSocket(nullptr));
 
-    socket->connectToHost(mUrl.host(), static_cast<uint16_t>(mUrl.port()));
-    qDebug() << "connect to " + mUrl.host() + ":" + QString::number(mUrl.port());
+    socket->connectToHost(SETTING_INI->value("CONNECT/IP", "127.0.0.1").toString(),
+                          static_cast<uint16_t>(SETTING_INI->value("CONNECT/Port", 5555).toInt()));
 
     if(socket->waitForConnected(500)) {
         qDebug() << "Connected!";
         connect(socket.data(), &QIODevice::readyRead, this, &connector::readData);
         return true;
     } else {
-        qDebug() << "Error!";
+        qDebug() << "socket Error!";
         return false;
     }
 }
 
 void connector::send(QString msg)
 {
+    command = msg;
     msg.append("\r\n");
     qDebug() << msg << " " << writeData(msg.toLatin1());
 }

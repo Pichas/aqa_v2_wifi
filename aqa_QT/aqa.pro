@@ -44,20 +44,20 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     driver.cpp \
-    timers.cpp \
     connector.cpp \
     timersmodeltable.cpp \
     addtimerwin.cpp \
-    mySet/myset.cpp
+    mySet/myset.cpp \
+    drvSender.cpp
 
 HEADERS += \
         mainwindow.h \
     driver.h \
-    timers.h \
     connector.h \
     timersmodeltable.h \
     addtimerwin.h \
-    mySet/myset.h
+    mySet/myset.h \
+    drvSender.h
 
 FORMS += \
         mainwindow.ui \

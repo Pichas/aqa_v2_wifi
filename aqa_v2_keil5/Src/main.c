@@ -53,7 +53,13 @@
 volatile uint8_t effectIndex = 0; //
 extern uint8_t uartRX;
 
+void setEffectIndex(unsigned int x){
+  effectIndex = x % getEffectCount();
+}
 
+unsigned int getEffectIndex(void){
+  return effectIndex;
+}
 
 /* USER CODE END Includes */
 
@@ -143,7 +149,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    getEffect(effectIndex)(&delayTime);
+    runEffect(effectIndex)(&delayTime);
     HAL_Delay(delayTime);
   /* USER CODE END WHILE */
 
