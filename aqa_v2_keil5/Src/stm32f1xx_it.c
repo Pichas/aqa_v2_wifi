@@ -319,7 +319,7 @@ void RXBUF_work()
         uartTX_buf[10] = (curDate.Month % 10 + 0x30);
         uartTX_buf[11] = (curDate.Year / 10 + 0x30);
         uartTX_buf[12] = (curDate.Year % 10 + 0x30);
-        uartTX_buf[13] = ((curDate.WeekDay == 0 ? 7 : curDate.WeekDay) % 10 + 0x30); //sun 0 -> 7
+        uartTX_buf[13] = ((curDate.WeekDay == 0 ? 7 : curDate.WeekDay) + 0x30); //sun 0 -> 7
         
         uartTX_buf[0] = 'G';//com OK
         uartTX_buf[18] = 0x0D;//cr
@@ -337,16 +337,11 @@ void RXBUF_work()
       
         HAL_RTC_SetTime(&hrtc, &curTime, RTC_FORMAT_BIN);
         HAL_RTC_SetDate(&hrtc, &curDate, RTC_FORMAT_BIN);
-        uartTX_buf[0] = 'S'; //OK
-        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       //leds
       case 'E':{
         setEffectIndex(uartRX_buf[startPos + 1] - 0x30);
-        uartTX_buf[0] = 'E'; //OK
-        uartTX_buf[1] = uartRX_buf[startPos + 1]; 
-        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       case 'M':{
@@ -369,8 +364,6 @@ void RXBUF_work()
       //timers
       case 'J':{
         enTimers = uartRX_buf[startPos + 1] - 0x30;
-        uartTX_buf[0] = 'J'; //OK
-        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
             
       case 'A':{
@@ -424,25 +417,26 @@ void RXBUF_work()
       case 'R':{
         uint8_t timerNum = (uartRX_buf[startPos + 1] - 0x30) * 10 + (uartRX_buf[startPos + 2] - 0x30); //get num timer
         
-        timer* t = timerStart;
-        for (uint8_t i = 0; i < timerNum && t; i++) //seek position
+        timer *t = timerStart, *support = timerStart;
+        for (uint8_t i = 0; i < timerNum && t; i++){ //seek position
+          support = t;
           t = t->next;
-        
-        if(t){
-          timer* tDel = t->next;
-          *t = *t->next; //delete from list
-          free(tDel); //free mem
         }
-        uartTX_buf[0] = 'R'; //OK
-        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
+        
+        if(!t) break;
+        
+        if(t == timerStart)
+            timerStart = timerStart->next;
+        else
+            support->next = t->next;
+
+        free(t); //free mem
       break;}
       
       
       //relay
       case 'X':{
         HAL_GPIO_WritePin(GPIOB, 1 << (12 + uartRX_buf[startPos + 1] - 0x30), ((GPIO_PinState)(uartRX_buf[startPos + 2] - 0x30))^0x01); //reverse bit
-        uartTX_buf[0] = 'X'; //OK
-        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       //get all info
@@ -451,7 +445,7 @@ void RXBUF_work()
         uartTX_buf[1] = enTimers + 0x30;
         uartTX_buf[2] = (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12))^0x01 + 0x30;
         uartTX_buf[3] = (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13))^0x01 + 0x30;
-        uartTX_buf[4] = getEffectIndex();
+        uartTX_buf[4] = getEffectIndex() + 0x30;
       
         uartTX_buf[18] = 0x0D;//cr
         uartTX_buf[19] = 0x0A;//lf
