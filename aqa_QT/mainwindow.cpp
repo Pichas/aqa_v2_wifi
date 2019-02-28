@@ -6,17 +6,21 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
     device.reset(new driver(ui->tvAllTimers, this));
-
     connect(device.data(), &driver::sendMessage, ui->statusBar, &QStatusBar::showMessage);
     connect(device.data(), &driver::sendEffectChanged, this, &MainWindow::refreshActions);
 
     connect(ui->pbExport,  &QPushButton::clicked, this, &MainWindow::exportTimers);
     connect(ui->pbImport,  &QPushButton::clicked, this, &MainWindow::importTimers);
 
+
+
     connect(ui->actIPPort, &QAction::triggered, this, &MainWindow::setIPPort);
-    connect(ui->actConnect, &QAction::triggered, [this]{device->reconn();});
+    connect(ui->actConnect, &QAction::triggered, [this]{
+        device->conn();
+        this->loadStatus();        //обновить интерфейс
+    });
+
 
 
     connect(ui->actGetTime, &QAction::triggered, [&]{device->getTimeFromDevice();});
@@ -37,7 +41,7 @@ MainWindow::MainWindow(QWidget *parent) :
             static QColor color = Qt::white;
             color = QColorDialog::getColor(color, this, "Выбор цвета");
             if (device->effect() != 4) device->setEffect(4);
-            device->setUserColor(0, color.toRgb().red(), color.toRgb().green(), color.toRgb().blue());
+            device->sendSingleLedColor(0, color.toRgb().red(), color.toRgb().green(), color.toRgb().blue());
             ui->menu_7->setStyleSheet("QMenu::item { background-color: " + color.name() + "; }");
         });
 
@@ -67,6 +71,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->actRefresh,  &QAction::triggered, this, &MainWindow::loadStatus);
 
+
     ui->actRefresh->setShortcut(Qt::Key_F5);
     ui->actExit->setShortcut(Qt::Key_F12);
 
@@ -79,8 +84,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->sbStart->setValue(SETTING_INI->value("LEDS/start",0).toInt());
     ui->sbElementsInRow->setValue(SETTING_INI->value("LEDS/columns",0).toInt());
 
-
-    QTimer::singleShot(1000, this, &MainWindow::loadStatus); //load data
 }
 
 MainWindow::~MainWindow()
@@ -106,12 +109,16 @@ void MainWindow::setIPPort()
 
 void MainWindow::uploadToDevice()
 {
-    for (int i = 0 ; i < allLeds.count() ; i++){
-        if (device->effect() != 5) break; //выйти, если не тот эффект
+    ui->pbarUploading->setMaximum(allLeds.count() - 1);
+    if (device->effect() != 5) return; //выйти, если не тот эффект
 
+    for (int i = 0 ; i < allLeds.count() ; i++){
+
+        ui->pbarUploading->setValue(i);
         QColor c = allLeds.value(allLeds.keys().at(i));
-        device->setUserColor(allLeds.keys().at(i)->text().toInt(), c.red(), c.green(),c.blue());
+        device->setUserColorQueue(allLeds.keys().at(i)->text().toInt(), c.red(), c.green(),c.blue());
     }
+    device->sendLedsArray();
 }
 
 void MainWindow::loadStatus()
@@ -221,6 +228,8 @@ void MainWindow::importTimers()
                 QString loadedTimer;
                 stream >> loadedTimer;
                 device->addTimer(loadedTimer);
+                QThread::msleep(150);
+                QCoreApplication::processEvents();
             }
 
             if(stream.status() != QDataStream::Ok){
@@ -242,7 +251,7 @@ void MainWindow::makeMatrix()
     delMatrix();//удалить старые
     this->resize(662, 437);
 
-    const static QSize btnSize = QSize(22, 22);
+    const static QSize btnSize = QSize(20, 20);
     int row = 0;
     int column = 0;
 
@@ -284,7 +293,7 @@ void MainWindow::setLedColor()
     allLeds[b] = brushColor;
     b->setStyleSheet("background-color: " + brushColor.name() + ";");
 
-    device->setUserColor(b->text().toInt(), allLeds[b].red(), allLeds[b].green(), allLeds[b].blue());
+    device->sendSingleLedColor(b->text().toInt(), allLeds[b].red(), allLeds[b].green(), allLeds[b].blue());
 }
 
 void MainWindow::pickBrushColor()
@@ -364,6 +373,7 @@ void MainWindow::importLedMap()
                         b->setStyleSheet("background-color: " + allLeds[b].name() + ";");
                     }
                 }
+                QCoreApplication::processEvents();
             }
 
             if(stream.status() != QDataStream::Ok){

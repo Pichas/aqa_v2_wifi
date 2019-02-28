@@ -47,8 +47,7 @@ SOURCES += \
     connector.cpp \
     timersmodeltable.cpp \
     addtimerwin.cpp \
-    mySet/myset.cpp \
-    drvSender.cpp
+    mySet/myset.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -56,8 +55,7 @@ HEADERS += \
     connector.h \
     timersmodeltable.h \
     addtimerwin.h \
-    mySet/myset.h \
-    drvSender.h
+    mySet/myset.h
 
 FORMS += \
         mainwindow.ui \

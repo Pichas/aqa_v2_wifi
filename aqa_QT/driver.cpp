@@ -2,11 +2,9 @@
 
 driver::driver(QTableView *tview, QObject *parent) : QObject(parent)
 {
-    sender = new drvSender(this);
-    connect(sender, &drvSender::sigSendStatus, [&](QString msg){emit sendMessage(msg);});
-    connect(sender, &drvSender::sigSendResultData, this, &driver::getData);
-
+    cntr.reset(new connector());
     timersTable.reset(new timersModelTable());
+
     tview->setModel(timersTable.data());
     tview->setColumnWidth(0,40);
     tview->setColumnWidth(1,50);
@@ -20,10 +18,17 @@ driver::~driver()
 
 }
 
-void driver::reconn()
+void driver::conn()
 {
-    sender->restartSender();
+    cntr.reset(new connector());
+    if (cntr->conn()){
+        connect(cntr.data(), &connector::sendResult, this, &driver::getData);
+        sendMessage("Соединение установлено");
+    }else{
+        sendMessage("Ошибка соединения");
+    }
 }
+
 
 void driver::getData(QString msg)
 {
@@ -37,8 +42,7 @@ void driver::getData(QString msg)
         msg.insert(4, ':');
         msg.insert(2, ':');
 
-        QMessageBox::information(nullptr, "Время в контроллере", "Установленное: " + msg + "\r\n"
-                                 + "Текущее: " + QDateTime::currentDateTime().toString("dd.MM.yy HH:mm:ss ") + QString::number(QDate::currentDate().dayOfWeek()));
+        QMessageBox::information(nullptr, "Время в контроллере", msg);
     }
 
     if (msg[0] == 'Z'){ //вывод статуса контроллера
@@ -54,24 +58,33 @@ void driver::getData(QString msg)
                 msg[5].toLatin1(),
                 msg[6].toLatin1(),
                 msg[7].toLatin1() - 0x30);
-
         QString buf;
         buf.sprintf("T%02d", timersTable->rowCount());
-        sender->send(buf); //load next timer
+        cntr->send(buf);
+    }
+
+    if (msg[0] == 'M'){ //вывод даты времени
+        if (!ledsArray.isEmpty()){
+            cntr->send(ledsArray.dequeue()); //send next
+            sendMessage(QString("Отправка цветов. Осталось %1 светодиодов").arg(ledsArray.count()));
+        }
     }
 }
 
 
+
+
+
 void driver::getStatus()
 {
-    sender->send("Z");
+    cntr->send("Z");
 }
 
 
 
 void driver::getTimeFromDevice()
 {
-    sender->send("G");
+    cntr->send("G");
 }
 
 void driver::syncTimeToDevice()
@@ -79,51 +92,66 @@ void driver::syncTimeToDevice()
     QString sync = "S" + QDateTime::currentDateTime().toString("HHmmssddMMyy") +
             QString::number(QDate::currentDate().dayOfWeek());
 
-    sender->send(sync);
+    cntr->send(sync);
 }
 
 void driver::setRelayStatus(int n, int s)
 {
     relay[n] = s;
-    sender->send("X" + QString::number(n) + QString::number(s));
+    cntr->send("X" + QString::number(n) + QString::number(s));
 }
 
 void driver::setEnTimers(int e)
 {
-    sender->send("J" + QString::number(e).toLatin1());
+    cntr->send("J" + QString::number(e).toLatin1());
 }
 
 void driver::setEffect(int e)
 {
     effectIndex = e;
-    sender->send("E" + QString::number(e));
+    cntr->send("E" + QString::number(e));
     emit sendEffectChanged();
 }
 
-void driver::setUserColor(int n, int r, int g, int b)
+void driver::setUserColorQueue(int n, int r, int g, int b)
 {
     QString buf;
     buf.sprintf("M%03d%03d%03d%03d", n, r, g, b);
-    sender->send(buf);
+    ledsArray.enqueue(buf);
+}
+
+void driver::sendSingleLedColor(int n, int r, int g, int b)
+{
+    QString buf;
+    buf.sprintf("M%03d%03d%03d%03d", n, r, g, b);
+    cntr->send(buf);
+}
+
+void driver::sendLedsArray()
+{
+    cntr->send(ledsArray.dequeue());
 }
 
 void driver::addTimer(QString timerString)
 {
-    sender->send(timerString);
+    cntr->send(timerString);
 }
+
+
+
 
 
 void driver::removeTimer(int n)
 {
     QString buf;
     buf.sprintf("R%02d", n);
-    sender->send(buf);
+    cntr->send(buf);
 }
 
 void driver::loadTimers()
 {
     timersTable->clear();
-    sender->send("T00"); //start loading
+    cntr->send("T00");
 }
 
 

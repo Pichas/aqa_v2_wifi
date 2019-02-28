@@ -8,13 +8,14 @@
 #include <QMessageBox>
 #include <QTableView>
 #include <QInputDialog>
+#include <QQueue>
 
 
 
-#include "addtimerwin.h"
 #include "timersmodeltable.h"
+#include "addtimerwin.h"
+#include "connector.h"
 #include "mySet/myset.h"
-#include "drvSender.h"
 
 class driver : public QObject
 {
@@ -23,7 +24,7 @@ public:
     explicit driver(QTableView *tview, QObject *parent = nullptr);
     ~driver();
 
-    void reconn();
+    void conn();
 
     void getStatus();
 
@@ -32,8 +33,9 @@ public:
     void setRelayStatus(int n, int s);
     void setEnTimers(int e);
     void setEffect(int e);
-    void setUserColor(int n, int r, int g, int b);
-
+    void setUserColorQueue(int n, int r, int g, int b);
+    void sendSingleLedColor(int n, int r, int g, int b);
+    void sendLedsArray();
 
 
     bool isEnTimers(){return enTimers;}
@@ -50,9 +52,9 @@ private:
     bool enTimers;
     bool relay[2];
     int effectIndex;
+    QQueue<QString> ledsArray;
 
-    drvSender* sender;
-
+    QScopedPointer<connector> cntr;
     QScopedPointer<timersModelTable> timersTable;
 
 signals:
