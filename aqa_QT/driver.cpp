@@ -42,7 +42,7 @@ void driver::getData(QString msg)
         msg.insert(4, ':');
         msg.insert(2, ':');
 
-        QMessageBox::information(nullptr, "Время в контроллере", msg);
+        sendMessage("Время в контроллере: " + msg, 10000);
     }
 
     if (msg[0] == 'Z'){ //вывод статуса контроллера

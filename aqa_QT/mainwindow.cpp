@@ -84,6 +84,21 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->sbStart->setValue(SETTING_INI->value("LEDS/start",0).toInt());
     ui->sbElementsInRow->setValue(SETTING_INI->value("LEDS/columns",0).toInt());
 
+    //about
+    connect(ui->actQt, &QAction::triggered, qApp, &QApplication::aboutQt);
+    connect(ui->actAbout, &QAction::triggered, [&]{
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("О программе \"аквариум\"");
+        msgBox.setTextFormat(Qt::RichText);   //this is what makes the links clickable
+        msgBox.setText("Программа предназначена для управления подсветкой аквариума. \n"
+                       "Исходный код программы можно скачать по <a href='https://github.com/Pichas/aqa_v2_wifi'>ссылке</a> ");
+        msgBox.exec();
+    });
+
+
+
+
+
 }
 
 MainWindow::~MainWindow()

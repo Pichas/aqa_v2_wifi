@@ -343,7 +343,7 @@
      <x>0</x>
      <y>0</y>
      <width>662</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -359,6 +359,7 @@
      <string>?</string>
     </property>
     <addaction name="actAbout"/>
+    <addaction name="actQt"/>
    </widget>
    <widget class="QMenu" name="menu_3">
     <property name="title">
@@ -524,6 +525,11 @@
   <action name="actConnect">
    <property name="text">
     <string>Подключиться</string>
+   </property>
+  </action>
+  <action name="actQt">
+   <property name="text">
+    <string>О Qt</string>
    </property>
   </action>
  </widget>
