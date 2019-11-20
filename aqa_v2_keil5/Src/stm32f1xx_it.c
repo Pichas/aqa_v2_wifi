@@ -50,9 +50,9 @@ uint8_t enTimers = 0;
 uint8_t bIndex = 0;
 
 uint8_t uartRX;
-uint8_t uartRX_buf[20];
-uint8_t uartTX_buf[20];
-uint8_t uartPrepSend[] = "AT+CIPSEND=0,20\r\n";
+uint8_t uartRX_buf[40];
+uint8_t uartTX_buf[40];
+uint8_t uartPrepSend[] = "AT+CIPSEND=0,40\r\n";
 
 
 /* USER CODE END 0 */
@@ -301,29 +301,41 @@ void RXBUF_work()
   
   if (uartRX_buf[0] == '+'){ //rx data packet
     uint16_t startPos = 0;
-    while(uartRX_buf[startPos++] != ':'); //find start rx data
+    memset((uint8_t*)(uartTX_buf), 0, sizeof(uartTX_buf));//memclr
     
+    
+    while(uartRX_buf[startPos++] != ':' && startPos <= sizeof(uartRX_buf)); //find start rx data
+    
+    if (startPos > sizeof(uartRX_buf)) return; //if error pos
+    
+    //sender id
+    uartPrepSend[11] = uartRX_buf[5];
     
     switch(uartRX_buf[startPos]){
     //datetime
       case 'G':{ //get
-        uartTX_buf[1] = (curTime.Hours / 10 + 0x30);
-        uartTX_buf[2] = (curTime.Hours % 10 + 0x30);
-        uartTX_buf[3] = (curTime.Minutes / 10 + 0x30);
-        uartTX_buf[4] = (curTime.Minutes % 10 + 0x30);
-        uartTX_buf[5] = (curTime.Seconds / 10 + 0x30);
-        uartTX_buf[6] = (curTime.Seconds % 10 + 0x30);
-        uartTX_buf[7] = (curDate.Date / 10 + 0x30);
-        uartTX_buf[8] = (curDate.Date % 10 + 0x30);
-        uartTX_buf[9] = (curDate.Month / 10 + 0x30);
-        uartTX_buf[10] = (curDate.Month % 10 + 0x30);
-        uartTX_buf[11] = (curDate.Year / 10 + 0x30);
-        uartTX_buf[12] = (curDate.Year % 10 + 0x30);
-        uartTX_buf[13] = ((curDate.WeekDay == 0 ? 7 : curDate.WeekDay) + 0x30); //sun 0 -> 7
+        uint8_t x = 0;
+        uartTX_buf[x++] = 'G';
+        uartTX_buf[x++] = (curTime.Hours / 10 + 0x30);
+        uartTX_buf[x++] = (curTime.Hours % 10 + 0x30);
+        uartTX_buf[x++] = ':';
+        uartTX_buf[x++] = (curTime.Minutes / 10 + 0x30);
+        uartTX_buf[x++] = (curTime.Minutes % 10 + 0x30);
+        uartTX_buf[x++] = ':';
+        uartTX_buf[x++] = (curTime.Seconds / 10 + 0x30);
+        uartTX_buf[x++] = (curTime.Seconds % 10 + 0x30);
+        uartTX_buf[x++] = ' ';
+        uartTX_buf[x++] = (curDate.Date / 10 + 0x30);
+        uartTX_buf[x++] = (curDate.Date % 10 + 0x30);
+        uartTX_buf[x++] = '.';
+        uartTX_buf[x++] = (curDate.Month / 10 + 0x30);
+        uartTX_buf[x++] = (curDate.Month % 10 + 0x30);
+        uartTX_buf[x++] = '.';
+        uartTX_buf[x++] = (curDate.Year / 10 + 0x30);
+        uartTX_buf[x++] = (curDate.Year % 10 + 0x30);
+        uartTX_buf[x++] = ' ';
+        uartTX_buf[x++] = ((curDate.WeekDay == 0 ? 7 : curDate.WeekDay) + 0x30); //sun 0 -> 7
         
-        uartTX_buf[0] = 'G';//com OK
-        uartTX_buf[18] = 0x0D;//cr
-        uartTX_buf[19] = 0x0A;//lf
         HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       case 'S':{ //set
@@ -337,36 +349,74 @@ void RXBUF_work()
       
         HAL_RTC_SetTime(&hrtc, &curTime, RTC_FORMAT_BIN);
         HAL_RTC_SetDate(&hrtc, &curDate, RTC_FORMAT_BIN);
+        
+        uint8_t x = 0;
+        uartTX_buf[x++] = 'S';//com OK
+        uartTX_buf[x++] = (curTime.Hours / 10 + 0x30);
+        uartTX_buf[x++] = (curTime.Hours % 10 + 0x30);
+        uartTX_buf[x++] = ':';
+        uartTX_buf[x++] = (curTime.Minutes / 10 + 0x30);
+        uartTX_buf[x++] = (curTime.Minutes % 10 + 0x30);
+        uartTX_buf[x++] = ':';
+        uartTX_buf[x++] = (curTime.Seconds / 10 + 0x30);
+        uartTX_buf[x++] = (curTime.Seconds % 10 + 0x30);
+        uartTX_buf[x++] = ' ';
+        uartTX_buf[x++] = (curDate.Date / 10 + 0x30);
+        uartTX_buf[x++] = (curDate.Date % 10 + 0x30);
+        uartTX_buf[x++] = '.';
+        uartTX_buf[x++] = (curDate.Month / 10 + 0x30);
+        uartTX_buf[x++] = (curDate.Month % 10 + 0x30);
+        uartTX_buf[x++] = '.';
+        uartTX_buf[x++] = (curDate.Year / 10 + 0x30);
+        uartTX_buf[x++] = (curDate.Year % 10 + 0x30);
+        uartTX_buf[x++] = ' ';
+        uartTX_buf[x++] = ((curDate.WeekDay == 0 ? 7 : curDate.WeekDay) + 0x30); //sun 0 -> 7
+        
+        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       //leds
-      case 'E':{
+      case 'I':{
         setEffectIndex(uartRX_buf[startPos + 1] - 0x30);
+        uartTX_buf[0] = 'I';//com OK
+        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       case 'M':{
-        setUserParams((uartRX_buf[startPos + 1] - 0x30) * 100 + (uartRX_buf[startPos + 2] - 0x30) * 10 + (uartRX_buf[startPos + 3] - 0x30),       //num
+        setOneLedColor((uartRX_buf[startPos + 1] - 0x30) * 100 + (uartRX_buf[startPos + 2] - 0x30) * 10 + (uartRX_buf[startPos + 3] - 0x30),       //num
                       (uartRX_buf[startPos + 4] - 0x30) * 100 + (uartRX_buf[startPos + 5] - 0x30) * 10 + (uartRX_buf[startPos + 6] - 0x30),       //red
                       (uartRX_buf[startPos + 7] - 0x30) * 100 + (uartRX_buf[startPos + 8] - 0x30) * 10 + (uartRX_buf[startPos + 9] - 0x30),       //green
                       (uartRX_buf[startPos + 10] - 0x30) * 100 + (uartRX_buf[startPos + 11] - 0x30) * 10 + (uartRX_buf[startPos + 12] - 0x30));   //blue
-        
+        setEffectIndex(4);
 
         uartTX_buf[0] = 'M';//com OK
         uartTX_buf[1] = uartRX_buf[startPos + 1];//
         uartTX_buf[2] = uartRX_buf[startPos + 2];//
         uartTX_buf[3] = uartRX_buf[startPos + 3];//
 
-        uartTX_buf[18] = 0x0D;//cr
-        uartTX_buf[19] = 0x0A;//lf
+        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
+      break;}
+      
+      case 'N':{
+        setOneColor((uartRX_buf[startPos + 1] - 0x30) * 100 + (uartRX_buf[startPos + 2] - 0x30) * 10 + (uartRX_buf[startPos + 3] - 0x30),       //red
+                    (uartRX_buf[startPos + 4] - 0x30) * 100 + (uartRX_buf[startPos + 5] - 0x30) * 10 + (uartRX_buf[startPos + 6] - 0x30),       //green
+                    (uartRX_buf[startPos + 7] - 0x30) * 100 + (uartRX_buf[startPos + 8] - 0x30) * 10 + (uartRX_buf[startPos + 9] - 0x30));   //blue
+        setEffectIndex(4);
+
+        uartTX_buf[0] = 'N';//com OK
         HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       //timers
       case 'J':{
         enTimers = uartRX_buf[startPos + 1] - 0x30;
+        uartTX_buf[0] = 'J';//com OK
+        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
             
       case 'A':{
+        if (uartRX_buf[startPos + 5] == 0) break; //if no week days
+        
         timer* timerNew = (timer*)malloc(sizeof(timer));
         if(!timerNew) break;//esli obekt ne sozdan
           
@@ -374,14 +424,35 @@ void RXBUF_work()
         timerNew->next = timerStart;
         timerStart = timerNew;
                
-        timerNew->time.Hours = (uartRX_buf[startPos + 1] - 0x30) * 10 + (uartRX_buf[startPos + 2] - 0x30);
-        timerNew->time.Minutes = (uartRX_buf[startPos + 3] - 0x30) * 10 + (uartRX_buf[startPos + 4] - 0x30);
+        timerNew->time.Hours = ((uartRX_buf[startPos + 1] - 0x30) * 10 + (uartRX_buf[startPos + 2] - 0x30) % 24);
+        timerNew->time.Minutes = ((uartRX_buf[startPos + 3] - 0x30) * 10 + (uartRX_buf[startPos + 4] - 0x30) % 60);
         timerNew->time.Seconds = 0x00;
         timerNew->weekDay = (uint8_t)uartRX_buf[startPos + 5];
-        timerNew->type = (timerType)uartRX_buf[startPos + 6];
+        timerNew->type = (timerType)(uartRX_buf[startPos + 6] - 0x30);
         timerNew->effNum = (uint8_t)(uartRX_buf[startPos + 7] - 0x30);
         
         uartTX_buf[0] = 'A'; //OK
+        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
+      break;}
+      
+      case 'C':{
+        uint8_t timerNum = (uartRX_buf[startPos + 8] - 0x30) * 10 + (uartRX_buf[startPos + 9] - 0x30); //get num timer
+        
+        timer *t = timerStart;
+        for (uint8_t i = 0; i < timerNum && t; i++){ //seek position
+          t = t->next;
+        }
+        
+        if(!t) break;//esli obekt ne sozdan
+               
+        t->time.Hours = (uartRX_buf[startPos + 1] - 0x30) * 10 + (uartRX_buf[startPos + 2] - 0x30);
+        t->time.Minutes = (uartRX_buf[startPos + 3] - 0x30) * 10 + (uartRX_buf[startPos + 4] - 0x30);
+        t->time.Seconds = 0x00;
+        t->weekDay = (uint8_t)uartRX_buf[startPos + 5];
+        t->type = (timerType)(uartRX_buf[startPos + 6] - 0x30);
+        t->effNum = (uint8_t)(uartRX_buf[startPos + 7] - 0x30);
+        
+        uartTX_buf[0] = 'C'; //OK
         HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
@@ -389,8 +460,8 @@ void RXBUF_work()
         uint8_t timerNum = (uartRX_buf[startPos + 1] - 0x30) * 10 + (uartRX_buf[startPos + 2] - 0x30); //get num timer
         
         timer* t = timerStart;
-        for (uint8_t i = 0; i < timerNum && t; i++) //seek position
-            t = t->next;
+        for (uint8_t i = 0; i < timerNum && t; i++, t = t->next); //seek position
+
         
         if (t){
           uartTX_buf[0] = 'T'; //OK
@@ -399,7 +470,7 @@ void RXBUF_work()
           uartTX_buf[3] = (t->time.Minutes / 10 + 0x30);
           uartTX_buf[4] = (t->time.Minutes % 10 + 0x30);
           uartTX_buf[5] = (t->weekDay);
-          uartTX_buf[6] = (t->type);
+          uartTX_buf[6] = (t->type + 0x30);
           uartTX_buf[7] = (t->effNum + 0x30);
         }else{
           uartTX_buf[0] = 'E'; //ERROR          
@@ -409,8 +480,6 @@ void RXBUF_work()
         uartTX_buf[8] = uartRX_buf[startPos + 1]; //tim num
         uartTX_buf[9] = uartRX_buf[startPos + 2];
       
-        uartTX_buf[18] = 0x0D;//cr
-        uartTX_buf[19] = 0x0A;//lf
         HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
@@ -431,12 +500,18 @@ void RXBUF_work()
             support->next = t->next;
 
         free(t); //free mem
+        
+        uartTX_buf[0] = 'R'; //OK
+        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       
       //relay
-      case 'X':{
-        HAL_GPIO_WritePin(GPIOB, 1 << (12 + uartRX_buf[startPos + 1] - 0x30), ((GPIO_PinState)(uartRX_buf[startPos + 2] - 0x30))^0x01); //reverse bit
+      case 'X':{                    //bit num                                   value
+        HAL_GPIO_WritePin(GPIOB, 1 << (12 + uartRX_buf[startPos + 1] - 0x30), (GPIO_PinState)((uartRX_buf[startPos + 2] - 0x30)^0x01)); 
+        
+        uartTX_buf[0] = 'X'; //OK
+        HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
       //get all info
@@ -447,8 +522,6 @@ void RXBUF_work()
         uartTX_buf[3] = (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13))^0x01 + 0x30;
         uartTX_buf[4] = getEffectIndex() + 0x30;
       
-        uartTX_buf[18] = 0x0D;//cr
-        uartTX_buf[19] = 0x0A;//lf
         HAL_UART_Transmit_IT(&huart1, uartPrepSend, sizeof(uartPrepSend) - 1);
       break;}
       
@@ -457,14 +530,14 @@ void RXBUF_work()
     }
   }
   
-  bIndex = 0;
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   uartRX_buf[bIndex++] = uartRX; //get byte
   
-  if((uartRX_buf[bIndex - 1] == 0x0A && uartRX_buf[bIndex - 2] == 0x0D) || uartRX == '>'){
+  if(uartRX == '>' || (bIndex >= 2 && uartRX_buf[bIndex - 1] == 0x0A && uartRX_buf[bIndex - 2] == 0x0D)){
     RXBUF_work();
+    bIndex = 0;
   }
   
   if (bIndex >= sizeof(uartRX_buf)) bIndex = 0; //reset if overload

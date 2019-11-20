@@ -6,16 +6,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>662</width>
-    <height>437</height>
+    <width>791</width>
+    <height>526</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Аквариумный свет</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QGridLayout" name="gridLayout_3">
-    <item row="0" column="0">
+   <layout class="QVBoxLayout" name="verticalLayout_5">
+    <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
        <number>1</number>
@@ -290,26 +290,28 @@
            </spacer>
           </item>
           <item>
-           <widget class="QProgressBar" name="pbarUploading">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>150</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="value">
-             <number>0</number>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <item>
+             <widget class="QLabel" name="lTime">
+              <property name="text">
+               <string>Время на устройстве</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="tbSyncTime">
+              <property name="text">
+               <string>...</string>
+              </property>
+              <property name="arrowType">
+               <enum>Qt::LeftArrow</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>
@@ -342,7 +344,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>662</width>
+     <width>791</width>
      <height>18</height>
     </rect>
    </property>
@@ -350,7 +352,6 @@
     <property name="title">
      <string>Файл</string>
     </property>
-    <addaction name="actRefresh"/>
     <addaction name="separator"/>
     <addaction name="actExit"/>
    </widget>
@@ -361,44 +362,6 @@
     <addaction name="actAbout"/>
     <addaction name="actQt"/>
    </widget>
-   <widget class="QMenu" name="menu_3">
-    <property name="title">
-     <string>Время</string>
-    </property>
-    <addaction name="actGetTime"/>
-    <addaction name="actSyncTime"/>
-   </widget>
-   <widget class="QMenu" name="menu_4">
-    <property name="title">
-     <string>Режим</string>
-    </property>
-    <widget class="QMenu" name="menu_5">
-     <property name="title">
-      <string>Светодиоды</string>
-     </property>
-     <addaction name="actLedOff"/>
-     <addaction name="actLedOn"/>
-    </widget>
-    <widget class="QMenu" name="menu_6">
-     <property name="title">
-      <string>Реле</string>
-     </property>
-     <addaction name="actRelay0"/>
-     <addaction name="actRelay1"/>
-    </widget>
-    <widget class="QMenu" name="menu_7">
-     <property name="title">
-      <string>Вручную</string>
-     </property>
-     <addaction name="actSetUserColor"/>
-    </widget>
-    <addaction name="actSunrise"/>
-    <addaction name="actSunset"/>
-    <addaction name="menu_7"/>
-    <addaction name="actCustomMode"/>
-    <addaction name="menu_5"/>
-    <addaction name="menu_6"/>
-   </widget>
    <widget class="QMenu" name="menu_8">
     <property name="title">
      <string>Подключение</string>
@@ -406,10 +369,30 @@
     <addaction name="actIPPort"/>
     <addaction name="actConnect"/>
    </widget>
+   <widget class="QMenu" name="menuEff">
+    <property name="title">
+     <string>Эффекты</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_9">
+    <property name="title">
+     <string>Реле</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="actRelay0"/>
+    <addaction name="actRelay1"/>
+   </widget>
+   <widget class="QMenu" name="menuColor">
+    <property name="title">
+     <string>Цвет</string>
+    </property>
+    <addaction name="actSetUserColor"/>
+   </widget>
    <addaction name="menu"/>
    <addaction name="menu_8"/>
-   <addaction name="menu_3"/>
-   <addaction name="menu_4"/>
+   <addaction name="menuEff"/>
+   <addaction name="menuColor"/>
+   <addaction name="menu_9"/>
    <addaction name="menu_2"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -506,7 +489,7 @@
   </action>
   <action name="actSetUserColor">
    <property name="checkable">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>Задать цвет</string>
@@ -530,6 +513,26 @@
   <action name="actQt">
    <property name="text">
     <string>О Qt</string>
+   </property>
+  </action>
+  <action name="action0">
+   <property name="text">
+    <string>0</string>
+   </property>
+  </action>
+  <action name="action1">
+   <property name="text">
+    <string>1</string>
+   </property>
+  </action>
+  <action name="actColor">
+   <property name="text">
+    <string>Цвет</string>
+   </property>
+  </action>
+  <action name="action_2">
+   <property name="text">
+    <string>Выбрать</string>
    </property>
   </action>
  </widget>

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>341</width>
+    <width>490</width>
     <height>177</height>
    </rect>
   </property>
@@ -24,6 +24,12 @@
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QTimeEdit" name="timeTimer">
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
+          <property name="accelerated">
+           <bool>true</bool>
+          </property>
           <property name="displayFormat">
            <string>HH:mm</string>
           </property>
@@ -39,46 +45,19 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QComboBox" name="cbAction">
-          <item>
-           <property name="text">
-            <string>ВЫключить реле 0</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Включить реле 0</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>ВЫключить реле 1</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Включить реле 1</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Установить эффект</string>
-           </property>
-          </item>
-         </widget>
+         <widget class="QComboBox" name="cbAction"/>
         </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string>Эффект</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <widget class="QSpinBox" name="sbEffectNum">
-          <property name="maximumSize">
-           <size>
-            <width>30</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="maximum">
-           <number>4</number>
-          </property>
-         </widget>
+         <widget class="QComboBox" name="cbEff"/>
         </item>
        </layout>
       </widget>
@@ -96,12 +75,18 @@
         <property name="text">
          <string>Пн</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="cb2">
         <property name="text">
          <string>Вт</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -110,12 +95,18 @@
         <property name="text">
          <string>Ср</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="cb4">
         <property name="text">
          <string>Чт</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -124,6 +115,9 @@
         <property name="text">
          <string>Пт</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
@@ -131,12 +125,48 @@
         <property name="text">
          <string>Сб</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="cb7">
         <property name="text">
          <string>Вс</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="cbWD">
+        <property name="text">
+         <string>Буд</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="cbWE">
+        <property name="text">
+         <string>Вых</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="cbAll">
+        <property name="text">
+         <string>Все</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

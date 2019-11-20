@@ -1,23 +1,21 @@
 #include "timersmodeltable.h"
 
-timersModelTable::timersModelTable(QObject *parent) : QAbstractTableModel(parent)
+TimersModelTable::TimersModelTable(QObject *parent) : QAbstractTableModel(parent)
 {
-    rows = 0;
     columns = 5;
-
 }
 
-int timersModelTable::rowCount(const QModelIndex &/*parent*/) const
+int TimersModelTable::rowCount(const QModelIndex &/*parent*/) const
 {
-    return rows;
+    return allTimers.count();
 }
 
-int timersModelTable::columnCount(const QModelIndex &/*parent*/) const
+int TimersModelTable::columnCount(const QModelIndex &/*parent*/) const
 {
     return columns;
 }
 
-QVariant timersModelTable::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant TimersModelTable::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole)
     {
@@ -25,7 +23,7 @@ QVariant timersModelTable::headerData(int section, Qt::Orientation orientation, 
             switch (section)
             {
             case 0:
-                return QString("№пп");
+                return QString("№");
             case 1:
                 return QString("Время");
             case 2:
@@ -44,7 +42,7 @@ QVariant timersModelTable::headerData(int section, Qt::Orientation orientation, 
 }
 
 
-QVariant timersModelTable::data(const QModelIndex &index, int role) const
+QVariant TimersModelTable::data(const QModelIndex &index, int role) const
 {
     int row = index.row();
     int column = index.column();
@@ -60,7 +58,7 @@ QVariant timersModelTable::data(const QModelIndex &index, int role) const
             return allTimers.at(row)->startTime;
 
         case 2:{
-            QString days;
+            QString days; //TODO переделатьт на дни недели
             if (allTimers.at(row)->daysOfWeek & (1 << 0)) days.append(" ПН ");
             if (allTimers.at(row)->daysOfWeek & (1 << 1)) days.append(" ВТ ");
             if (allTimers.at(row)->daysOfWeek & (1 << 2)) days.append(" СР ");
@@ -68,34 +66,30 @@ QVariant timersModelTable::data(const QModelIndex &index, int role) const
             if (allTimers.at(row)->daysOfWeek & (1 << 4)) days.append(" ПТ ");
             if (allTimers.at(row)->daysOfWeek & (1 << 5)) days.append(" СБ ");
             if (allTimers.at(row)->daysOfWeek & (1 << 6)) days.append(" ВС ");
+            if (allTimers.at(row)->daysOfWeek == 0) days.append(" - ");
             return days;
         }
         case 3:{
-            QString str;
-            if (allTimers.at(row)->type == '1') str = "ВЫключить реле 0";
-            if (allTimers.at(row)->type == '2') str = "Включить реле 0";
-            if (allTimers.at(row)->type == '3') str = "ВЫключить реле 1";
-            if (allTimers.at(row)->type == '4') str = "Включить реле 1";
-            if (allTimers.at(row)->type == '5') str = "Переключить эффект";
-            return str;
+            return m_actions->key(allTimers.at(row)->type);
         }
         case 4:
-            return allTimers.at(row)->effNumber;
+            if (allTimers.at(row)->type == '5')
+                return m_effects->key(allTimers.at(row)->effNumber);
+            else
+                return "";
         }
     }
     return QVariant();
 }
 
-void timersModelTable::insertRow(QTime startTime, char daysOfWeek, char type, int effNumber)
+void TimersModelTable::insertRow(QTime startTime, int daysOfWeek, int type, int effNumber)
 {
     beginResetModel();
-    rows++;
-    timer* t = new timer(startTime, daysOfWeek, type, effNumber);
-    allTimers.append(t);
+    allTimers.append(new timer(startTime, daysOfWeek, type, effNumber));
     endResetModel();
 }
 
-void timersModelTable::clear()
+void TimersModelTable::clear()
 {
     beginResetModel();
 
@@ -103,6 +97,70 @@ void timersModelTable::clear()
         delete t;
 
     allTimers.clear();
-    rows = 0;
     endResetModel();
+}
+
+bool TimersModelTable::exportTimers(QString fileName)
+{
+    if (fileName.isEmpty()) return false;
+
+    QFile file(fileName);
+    if(!file.open(QIODevice::WriteOnly)) return false;
+
+
+    QDataStream stream(&file);
+    stream.setVersion(QDataStream::Qt_4_2);
+
+    stream << QString("Аквариумные таймеры");
+    stream << allTimers.count(); //записать количество записей
+
+    for (int i = 0 ; i < allTimers.count() ; i++){
+        stream << allTimers.at(i)->startTime;
+        stream << allTimers.at(i)->daysOfWeek;
+        stream << allTimers.at(i)->type;
+        stream << allTimers.at(i)->effNumber;
+    }
+
+    file.close();
+
+    if(stream.status() != QDataStream::Ok) return true;
+    return false;
+
+}
+
+bool TimersModelTable::importTimers(QString fileName)
+{
+    if (fileName.isEmpty()) return false;
+
+    QFile file(fileName);
+    if(!file.open(QIODevice::ReadOnly)) return false;
+
+    QDataStream stream(&file);
+    stream.setVersion (QDataStream::Qt_4_2) ;
+
+    QString check;
+    stream >> check;
+    if (check != "Аквариумные таймеры") return false;
+
+    int dataCount;
+    stream >> dataCount;
+
+    for (int i = 0; i < dataCount ; i++){
+        QTime time;
+        int dow;
+        int act;
+        int eff;
+
+        stream >> time;
+        stream >> dow;
+        stream >> act;
+        stream >> eff;
+
+        emit sendTimerData(time, dow, act, eff);
+    }
+
+    file.close();
+
+    if(stream.status() != QDataStream::Ok) return true;
+    return false;
 }

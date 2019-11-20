@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network sql
+QT       += core gui network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -31,27 +31,27 @@ UI_DIR = build
 ICON = ico/main.ico
 win32:RC_ICONS += ico/main.ico
 
-VERSION = 0.1.0.0
+VERSION = 1.1.0.0
 QMAKE_TARGET_COMPANY = home
 QMAKE_TARGET_PRODUCT = aqa
 QMAKE_TARGET_DESCRIPTION = no
 QMAKE_TARGET_COPYRIGHT = no
 
-CONFIG += c++17
-QMAKE_CXXFLAGS += -std=c++17
+CONFIG += c++1z
+QMAKE_CXXFLAGS += -std=c++1z
 
 SOURCES += \
+    devicesm.cpp \
         main.cpp \
         mainwindow.cpp \
-    driver.cpp \
     connector.cpp \
     timersmodeltable.cpp \
     addtimerwin.cpp \
     mySet/myset.cpp
 
 HEADERS += \
+    devicesm.h \
         mainwindow.h \
-    driver.h \
     connector.h \
     timersmodeltable.h \
     addtimerwin.h \

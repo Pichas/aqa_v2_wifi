@@ -18,7 +18,7 @@
 
 #include "addtimerwin.h"
 #include "timersmodeltable.h"
-#include "driver.h"
+#include "devicesm.h"
 
 namespace Ui {
 class MainWindow;
@@ -37,7 +37,8 @@ private:
 
 
     void setIPPort();
-    QScopedPointer<driver> device;
+    DeviceSM *device;
+    QThread* tDevice;
 
     void makeMatrix();
     void delMatrix();
@@ -47,8 +48,9 @@ private:
 
 
 private slots:
+    void setEffect();
+
     void uploadToDevice();
-    void loadStatus();
     void refreshActions();
 
     void exportTimers();

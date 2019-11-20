@@ -6,83 +6,83 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    device.reset(new driver(ui->tvAllTimers, this));
-    connect(device.data(), &driver::sendMessage, ui->statusBar, &QStatusBar::showMessage);
-    connect(device.data(), &driver::sendEffectChanged, this, &MainWindow::refreshActions);
+//    device.reset(new driver(this));
+    device = new DeviceSM();
+    tDevice = new QThread();
+    device->moveToThread(tDevice);
+    connect(tDevice, &QThread::started, device, &DeviceSM::start);
+
+
+    ui->tvAllTimers->setModel(device->timersModel());
+    ui->tvAllTimers->setColumnWidth(0,40);
+    ui->tvAllTimers->setColumnWidth(1,50);
+    ui->tvAllTimers->setColumnWidth(2,150);
+    ui->tvAllTimers->setColumnWidth(3,250);
+    ui->tvAllTimers->setColumnWidth(4,10);
+
+
+    connect(device, &DeviceSM::sendStatus, ui->statusBar, &QStatusBar::showMessage);
+    connect(device, &DeviceSM::ready, this, &MainWindow::refreshActions);
 
     connect(ui->pbExport,  &QPushButton::clicked, this, &MainWindow::exportTimers);
     connect(ui->pbImport,  &QPushButton::clicked, this, &MainWindow::importTimers);
 
-
-
     connect(ui->actIPPort, &QAction::triggered, this, &MainWindow::setIPPort);
-    connect(ui->actConnect, &QAction::triggered, [this]{
-        device->conn();
-        this->loadStatus();        //обновить интерфейс
-    });
+    connect(ui->actConnect, &QAction::triggered, [&]{tDevice->start();});
 
+    connect(ui->tbSyncTime, &QToolButton::clicked, [&]{device->setDateTime();});
 
-
-    connect(ui->actGetTime, &QAction::triggered, [&]{device->getTimeFromDevice();});
-    connect(ui->actSyncTime, &QAction::triggered, [&]{device->syncTimeToDevice();});
-
-    connect(ui->actRelay0, &QAction::triggered, [&](int ch){device->setRelayStatus(0,ch);});
-    connect(ui->actRelay1, &QAction::triggered, [&](int ch){device->setRelayStatus(1,ch);});
+    connect(ui->actRelay0, &QAction::triggered, [&](int ch){device->setRelay(0,ch);});
+    connect(ui->actRelay1, &QAction::triggered, [&](int ch){device->setRelay(1,ch);});
 
     connect(ui->cbEnTimers, &QCheckBox::clicked, [&](int ch){device->setEnTimers(ch);});
 
     //effects
-    connect(ui->actLedOff,      &QAction::triggered, [&]{device->setEffect(0);});
-    connect(ui->actSunrise,     &QAction::triggered, [&]{device->setEffect(1);});
-    connect(ui->actSunset,      &QAction::triggered, [&]{device->setEffect(2);});
-    connect(ui->actLedOn,       &QAction::triggered, [&]{device->setEffect(3);});
+    for (QString name : device->effectsName()){
+        QAction* act = new QAction(name, ui->menuEff);
+        act->setCheckable(true);
+        connect(act, &QAction::triggered, this, &MainWindow::setEffect);
+        ui->menuEff->addAction(act);
+    }
 
     connect(ui->actSetUserColor,&QAction::triggered, [&]{
             static QColor color = Qt::white;
             color = QColorDialog::getColor(color, this, "Выбор цвета");
-            if (device->effect() != 4) device->setEffect(4);
-            device->sendSingleLedColor(0, color.toRgb().red(), color.toRgb().green(), color.toRgb().blue());
-            ui->menu_7->setStyleSheet("QMenu::item { background-color: " + color.name() + "; }");
+            device->setOneColor(color.toRgb().red(), color.toRgb().green(), color.toRgb().blue());
+            ui->menuColor->setStyleSheet("QMenu::item { background: " + color.name() + "; }");
         });
 
 
-    connect(ui->actCustomMode,  &QAction::triggered, [&]{device->setEffect(5);});
-
-    connect(ui->pbUpload,  &QPushButton::clicked, this, &MainWindow::uploadToDevice);
-    connect(ui->pbPickColor,  &QPushButton::clicked, this, &MainWindow::pickBrushColor);
-    connect(ui->pbSave,  &QPushButton::clicked, this, &MainWindow::exportLedMap);
-    connect(ui->pbLoad,  &QPushButton::clicked, this, &MainWindow::importLedMap);
 
 
     //timers
     connect(ui->pbAddTimer, &QPushButton::clicked, [&]{
-        QScopedPointer<addTimerWin> win(new addTimerWin());
-        connect(win.data(), &addTimerWin::sendStringTimer, device.data(), &driver::addTimer);
+        QScopedPointer<addTimerWin> win(new addTimerWin(device));
         win->exec();
-        device->loadTimers(); //обновить таймеры
+    });
+
+    connect(ui->tvAllTimers, &QTableView::doubleClicked, [&](QModelIndex x){
+        QScopedPointer<addTimerWin> win(new addTimerWin(device, x.siblingAtColumn(0).data().toInt()));
+        win->exec();
     });
 
     connect(ui->pbDelTimer, &QPushButton::clicked, [&]{
         if (ui->tvAllTimers->selectionModel() && ui->tvAllTimers->selectionModel()->hasSelection())
             device->removeTimer(ui->tvAllTimers->selectionModel()->selectedRows().at(0).data().toInt());
-        device->loadTimers(); //обновить таймеры
     });
-
-
-    connect(ui->actRefresh,  &QAction::triggered, this, &MainWindow::loadStatus);
-
-
-    ui->actRefresh->setShortcut(Qt::Key_F5);
-    ui->actExit->setShortcut(Qt::Key_F12);
 
 
     //matrix
     connect(ui->pbMakeMatrix, &QPushButton::clicked, this, &MainWindow::makeMatrix);
     connect(ui->pbDelMatrix, &QPushButton::clicked, this, &MainWindow::delMatrix);
+    connect(ui->pbUpload,  &QPushButton::clicked, this, &MainWindow::uploadToDevice);
+    connect(ui->pbPickColor,  &QPushButton::clicked, this, &MainWindow::pickBrushColor);
+    connect(ui->pbSave,  &QPushButton::clicked, this, &MainWindow::exportLedMap);
+    connect(ui->pbLoad,  &QPushButton::clicked, this, &MainWindow::importLedMap);
 
-    ui->sbCount->setValue(SETTING_INI->value("LEDS/count",0).toInt());
-    ui->sbStart->setValue(SETTING_INI->value("LEDS/start",0).toInt());
-    ui->sbElementsInRow->setValue(SETTING_INI->value("LEDS/columns",0).toInt());
+    ui->sbCount->setValue(SETTING_INI->value("LEDS/count", 0).toInt());
+    ui->sbStart->setValue(SETTING_INI->value("LEDS/start", 0).toInt());
+    ui->sbElementsInRow->setValue(SETTING_INI->value("LEDS/columns", 0).toInt());
 
     //about
     connect(ui->actQt, &QAction::triggered, qApp, &QApplication::aboutQt);
@@ -91,13 +91,9 @@ MainWindow::MainWindow(QWidget *parent) :
         msgBox.setWindowTitle("О программе \"аквариум\"");
         msgBox.setTextFormat(Qt::RichText);   //this is what makes the links clickable
         msgBox.setText("Программа предназначена для управления подсветкой аквариума. \n"
-                       "Исходный код программы можно скачать по <a href='https://github.com/Pichas/aqa_v2_wifi'>ссылке</a> ");
+                       "Исходный код программы можно скачать по ссылке <a href='https://github.com/Pichas/aqa_v2_wifi'>https://github.com/Pichas/aqa_v2_wifi</a> ");
         msgBox.exec();
     });
-
-
-
-
 
 }
 
@@ -124,96 +120,41 @@ void MainWindow::setIPPort()
 
 void MainWindow::uploadToDevice()
 {
-    ui->pbarUploading->setMaximum(allLeds.count() - 1);
-    if (device->effect() != 5) return; //выйти, если не тот эффект
+    if (allLeds.isEmpty()) return;
 
     for (int i = 0 ; i < allLeds.count() ; i++){
-
-        ui->pbarUploading->setValue(i);
         QColor c = allLeds.value(allLeds.keys().at(i));
-        device->setUserColorQueue(allLeds.keys().at(i)->text().toInt(), c.red(), c.green(),c.blue());
+        device->setOneLedColor(allLeds.keys().at(i)->text().toInt(), c.red(), c.green(),c.blue());
     }
-    device->sendLedsArray();
 }
 
-void MainWindow::loadStatus()
-{
-    device->getStatus();
-    QTimer::singleShot(50, this, &MainWindow::refreshActions);        // обновить элементы отображения
-    QTimer::singleShot(50, [&]{device->loadTimers();});        // обновить список таймеров
-}
+
 
 void MainWindow::refreshActions()
-{    ui->cbEnTimers->setChecked(device->isEnTimers());
-     ui->actRelay0->setChecked(device->isRelay(0));
-     ui->actRelay1->setChecked(device->isRelay(1));
+{
+    ui->cbEnTimers->setChecked(device->isEnTimers());
+    ui->actRelay0->setChecked(device->relay(0));
+    ui->actRelay1->setChecked(device->relay(1));
 
-     ui->actLedOff->setChecked(device->effect() == 0);
-     ui->actSunrise->setChecked(device->effect() == 1);
-     ui->actSunset->setChecked(device->effect() == 2);
-     ui->actLedOn->setChecked(device->effect() == 3);
-     ui->actSetUserColor->setChecked(device->effect() == 4);
-     ui->actCustomMode->setChecked(device->effect() == 5);
+    for (QAction* act : ui->menuEff->actions())
+        act->setChecked(act->text() == device->curEffect());
+
+    ui->lTime->setText(device->dateTime());
 }
 
 void MainWindow::exportTimers()
 {
-    if (!ui->tvAllTimers->model()) return;
-    timersModelTable* model = qobject_cast<timersModelTable*>(ui->tvAllTimers->model());
-
 
     QString fileName = QFileDialog::getSaveFileName(this,
                                                     tr("Открыть файл с таймерами"),
                                                     QDir::homePath(),
                                                     tr("Файл таймеров (*.tim);;Все файлы (*)"));
 
-    if (!fileName.isEmpty()){
-        QFile file(fileName);
-        if(file.open(QIODevice::WriteOnly)){
-            QDataStream stream(&file);
-            stream.setVersion(QDataStream::Qt_4_2);
-
-            stream << QString("Аквариумные таймеры");
-            stream << model->rowCount(); //записать количество записей
-
-            for (int i = 0 ; i < model->rowCount() ; i++){
-                QString row = "A";
-
-                row += model->index(i,1).data().toTime().toString("HHmm");
-
-                QString wd = model->index(i,2).data().toString();
-                char daysOfWeek = 0;
-                daysOfWeek |= wd.contains("ПН") << 0;
-                daysOfWeek |= wd.contains("ВТ") << 1;
-                daysOfWeek |= wd.contains("СР") << 2;
-                daysOfWeek |= wd.contains("ЧТ") << 3;
-                daysOfWeek |= wd.contains("ПТ") << 4;
-                daysOfWeek |= wd.contains("СБ") << 5;
-                daysOfWeek |= wd.contains("ВС") << 6;
-
-                row += daysOfWeek;
-
-                QString action = model->index(i,3).data().toString();;
-
-                if (action == "ВЫключить реле 0") row += '1';
-                if (action == "Включить реле 0") row += '2';
-                if (action == "ВЫключить реле 1") row += '3';
-                if (action == "Включить реле 1") row += '4';
-                if (action == "Переключить эффект") row += '5';
-
-                row += model->index(i,4).data().toString();
-                stream << row;
-            }
-
-            if(stream.status() != QDataStream::Ok){
-                QMessageBox::warning(nullptr, "Экспорт таймеров", "Ошибка экспорта");
-            }else{
-                QMessageBox::information(nullptr, "Экспорт таймеров", "Экспорт завершен успешно");
-            }
-        }
-        file.close();
+    if(device->exportTimers(fileName)){
+        QMessageBox::warning(nullptr, "Экспорт таймеров", "Ошибка экспорта");
+    }else{
+        QMessageBox::information(nullptr, "Экспорт таймеров", "Экспорт завершен успешно");
     }
-
 }
 
 void MainWindow::importTimers()
@@ -222,37 +163,11 @@ void MainWindow::importTimers()
                                 tr("Открыть файл с таймерами"),
                                 QDir::homePath(),
                                 tr("Файл таймеров (*.tim);;Все файлы (*)"));
-    if (!fileName.isEmpty()){
-        QFile file(fileName);
-        if(file.open(QIODevice::ReadOnly)){
 
-            QDataStream stream(&file);
-            stream.setVersion (QDataStream::Qt_4_2) ;
-
-            QString check;
-            stream >> check;
-            if (check != "Аквариумные таймеры") {
-                QMessageBox::warning(nullptr, "Импорт таймеров", "Это не файл таймеров");
-                return;
-            }
-
-            int dataCount;
-            stream >> dataCount;
-
-            for (int i = 0; i < dataCount ; i++){
-                QString loadedTimer;
-                stream >> loadedTimer;
-                device->addTimer(loadedTimer);
-                QThread::msleep(150);
-                QCoreApplication::processEvents();
-            }
-
-            if(stream.status() != QDataStream::Ok){
-                QMessageBox::warning(nullptr, "Импорт таймеров", "Ошибка импорта");
-            }
-            file.close();
-        }
-        this->loadStatus();
+    if(device->importTimers(fileName)){
+        QMessageBox::warning(nullptr, "Импорт таймеров", "Ошибка импорта");
+    }else{
+        QMessageBox::information(nullptr, "Импорт таймеров", "Импорт завершен успешно");
     }
 }
 
@@ -300,15 +215,21 @@ void MainWindow::delMatrix()
     }
 }
 
+void MainWindow::setEffect()
+{
+    device->setEffect(qobject_cast<QAction*>(QObject::sender())->text());
+}
+
+
+
 
 void MainWindow::setLedColor()
 {
     QPushButton* b = qobject_cast<QPushButton*> (QObject::sender());
 
     allLeds[b] = brushColor;
-    b->setStyleSheet("background-color: " + brushColor.name() + ";");
-
-    device->sendSingleLedColor(b->text().toInt(), allLeds[b].red(), allLeds[b].green(), allLeds[b].blue());
+    b->setStyleSheet("background: " + brushColor.name() + ";");
+    device->setOneLedColor(b->text().toInt(), allLeds[b].red(), allLeds[b].green(), allLeds[b].blue());
 }
 
 void MainWindow::pickBrushColor()
@@ -317,7 +238,7 @@ void MainWindow::pickBrushColor()
 
     QColor returnColor = QColorDialog::getColor(brushColor, this, "Выбор цвета");
     if (returnColor.isValid()) brushColor = returnColor;
-    b->setStyleSheet("background-color: " + brushColor.name() + ";");
+    b->setStyleSheet("background: " + brushColor.name() + ";");
 }
 
 void MainWindow::exportLedMap()
@@ -385,7 +306,7 @@ void MainWindow::importLedMap()
                 for (QPushButton* b : allLeds.keys()){
                     if (b->text() == ledName){
                         stream >> allLeds[b];
-                        b->setStyleSheet("background-color: " + allLeds[b].name() + ";");
+                        b->setStyleSheet("background: " + allLeds[b].name() + ";");
                     }
                 }
                 QCoreApplication::processEvents();

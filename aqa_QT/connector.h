@@ -10,23 +10,25 @@
 
 #include "mySet/myset.h"
 
-class connector : public QObject
+class Connector : public QObject
 {
     Q_OBJECT
 public:
-    explicit connector(QObject *parent = nullptr);
-    ~connector();
+    explicit Connector(QObject *parent = nullptr);
+    ~Connector();
 
-    bool conn();
+    bool connectToDevice();
     void send(QString msg);
+    QByteArray result() const;
 
 private:
-
-    QUrl mUrl;
-    QScopedPointer<QTcpSocket>socket;
+    QByteArray m_buffer;
+    QUrl m_mUrl;
+    QScopedPointer<QTcpSocket>m_socket;
 
 signals:
-    void sendResult(QString data);
+    void sendState(QString state, int time = 0);
+    void ready();
 
 public slots:
 
@@ -35,6 +37,7 @@ private slots:
 
     void readData();
     bool writeData(QByteArray data);
+    void stateChanged(QAbstractSocket::SocketState socketState);
 
 
 

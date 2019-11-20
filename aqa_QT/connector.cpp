@@ -1,69 +1,80 @@
 #include "connector.h"
 
-connector::connector(QObject *parent) : QObject(parent)
+Connector::Connector(QObject *parent) : QObject(parent)
 {
-    mUrl.setHost(SETTING_INI->value("CONNECT/IP", "127.0.0.1").toString());
-    mUrl.setPort(SETTING_INI->value("CONNECT/Port", 5555).toInt());
-
-    socket.reset(new QTcpSocket(nullptr));
+    m_mUrl.setHost(SETTING_INI->value("CONNECT/IP", "127.0.0.1").toString());
+    m_mUrl.setPort(SETTING_INI->value("CONNECT/Port", 5555).toInt());
 }
 
-connector::~connector()
+Connector::~Connector()
 {
-    socket->disconnectFromHost();
-    if (socket->state() == QAbstractSocket::UnconnectedState ||
-            socket->waitForDisconnected(1000))
+    if (!m_socket.data()) return;
+    m_socket->disconnectFromHost();
+    if (m_socket->state() == QAbstractSocket::UnconnectedState ||
+            m_socket->waitForDisconnected(1000))
         qDebug("Disconnected!");
 }
 
-bool connector::conn()
+bool Connector::connectToDevice()
 {
-    //корректно отключится
-    socket->disconnectFromHost();
-    if (socket->state() == QAbstractSocket::UnconnectedState ||
-            socket->waitForDisconnected(1000))
-        qDebug("Disconnected!");
+    m_socket.reset(new QTcpSocket(nullptr));
+    connect(m_socket.data(), &QTcpSocket::stateChanged, this, &Connector::stateChanged);
 
-    socket.reset(new QTcpSocket(nullptr));
-
-    socket->connectToHost(mUrl.host(), static_cast<uint16_t>(mUrl.port()));
-    qDebug() << "connect to " + mUrl.host() + ":" + QString::number(mUrl.port());
-
-    if(socket->waitForConnected(500)) {
-        qDebug() << "Connected!";
-        connect(socket.data(), &QIODevice::readyRead, this, &connector::readData);
+    m_socket->connectToHost(m_mUrl.host(), static_cast<uint16_t>(m_mUrl.port()));
+    if(m_socket->waitForConnected(500)) {
+        connect(m_socket.data(), &QIODevice::readyRead, this, &Connector::readData);
         return true;
     } else {
-        qDebug() << "Error!";
         return false;
     }
 }
 
-void connector::send(QString msg)
+void Connector::send(QString msg)
 {
     msg.append("\r\n");
-    qDebug() << msg << " " << writeData(msg.toLatin1());
+    writeData(msg.toLatin1());
 }
 
-void connector::readData()
+QByteArray Connector::result() const
 {
-    QByteArray buffer;
-    while (socket->bytesAvailable() > 0)
-    {
-        buffer.append(socket->readAll());
-    }
-    qDebug() << buffer;
-    emit sendResult(QString(buffer));
+    return m_buffer;
 }
 
-bool connector::writeData(QByteArray data)
+void Connector::readData()
 {
-    if(socket && socket->state() == QAbstractSocket::ConnectedState)
+    m_buffer.clear();
+    while (m_socket->bytesAvailable() > 0)
+        m_buffer.append(m_socket->readAll());
+    emit ready();
+}
+
+bool Connector::writeData(QByteArray data)
+{
+    if(m_socket && m_socket->state() == QAbstractSocket::ConnectedState)
     {
         qApp->processEvents();
-        socket->write(data); //write the data itself
-        return socket->waitForBytesWritten();
+        m_socket->write(data); //write the data itself
+        return m_socket->waitForBytesWritten();
     }
     else
         return false;
+}
+
+void Connector::stateChanged(QAbstractSocket::SocketState socketState)
+{
+    switch (socketState) {
+    case QAbstractSocket::HostLookupState:
+        emit sendState("Поиск узла", 1000);
+        break;
+    case QAbstractSocket::ConnectingState:
+        emit sendState("Подключение", 1000);
+        break;
+    case QAbstractSocket::ConnectedState:
+        emit sendState("Успешное подключение к " + m_mUrl.host() + ":" + QString::number(m_mUrl.port()), 1000);
+        break;
+
+    case QAbstractSocket::ClosingState:
+        emit sendState("Отключено от " + m_mUrl.host() + ":" + QString::number(m_mUrl.port()), 0);
+        break;
+    }
 }

@@ -18,20 +18,16 @@ class mySet : public QObject
 
 private:
     mySet();
-    ~mySet(){}
+    ~mySet(){sIni->deleteLater();}
 
     mySet(const mySet& Src);
     mySet(mySet&& Src);
     mySet& operator=(const mySet& Src);
 
-    QSettings* sReg;
     QSettings* sIni;
 
 public:
-    QSettings* reg() const;
-    QSettings* ini() const;
-
-    static QString progName;
+    QSettings* ini() const {return sIni;}
 
     static mySet* instance(){
         static mySet* theSingleInstance = new mySet();

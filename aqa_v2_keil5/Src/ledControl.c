@@ -9,7 +9,6 @@ void sunrise(uint32_t* delayTime); //восход
 void sunset(uint32_t* delayTime); //закат
 void ledsOn(uint32_t* delayTime); //потушить ленту
 void manual(uint32_t* delayTime); //
-void custom(uint32_t* delayTime); //
 
 void addEffect(pfn_effect); //добавить эффект в массив эфектов для вывода
 
@@ -40,14 +39,12 @@ ledsArray* init(uint16_t ledCount){
   ledCntrl.getLedX = &getLedX; //инициализация указателей
   ledCntrl.setUserColor = &setUserColor;
   
-  ledCntrl.BufArray = (uint8_t*)malloc((PREAMBLESIZE+ledCount*24)*sizeof(uint8_t)); //выделение динамической памяти. необходимо чтобы переменная Heap_Size была правильно установлена.
-  ledCntrl.BufSize = (PREAMBLESIZE+ledCount*24)*sizeof(uint8_t); //размер массива
+  ledCntrl.BufArray = (uint8_t*)calloc((PREAMBLESIZE + ledCount * 24), 1); //выделение динамической памяти. необходимо чтобы переменная Heap_Size была правильно установлена.
+  ledCntrl.BufSize = (PREAMBLESIZE + ledCount * 24); //размер массива
   
   if (!ledCntrl.BufArray) Error_Handler(); //если память не выделена уити с ошибкой
 
-  memset((uint8_t*)ledCntrl.BufArray, DOWN, ledCntrl.BufSize);//led off
-  memset((uint8_t*)ledCntrl.BufArray, 0,    PREAMBLESIZE);//reset signal
-  
+  memset((uint8_t*)(ledCntrl.BufArray + PREAMBLESIZE), DOWN, ledCount * 24);//led off
   
   //инициализация массива эфектов
   effAr.count = 0;
@@ -58,7 +55,6 @@ ledsArray* init(uint16_t ledCount){
   addEffect(&sunset);
   addEffect(&ledsOn);
   addEffect(&manual);
-  addEffect(&custom);
     
   return &ledCntrl;
 }
@@ -75,13 +71,15 @@ uint8_t getEffectCount(void){
   return effAr.count; 
 }
 
-void setUserParams(uint16_t num, uint8_t red, uint8_t green, uint8_t blue){
-  uCustomNum = num;
-  uRed = red;
-  uGreen = green;
-  uBlue = blue;
+
+void setOneColor(uint8_t red, uint8_t green, uint8_t blue){
+  for (int i = 0 ; i <= ledCntrl.ledCount ; i++)
+    ledCntrl.setUserColor(i, red, green, blue); //
 }
 
+void setOneLedColor(uint16_t num, uint8_t red, uint8_t green, uint8_t blue){
+  ledCntrl.setUserColor(num, red, green, blue); //
+}
 
 //private func
 void addEffect(pfn_effect nameEff){
@@ -207,19 +205,7 @@ void sunset(uint32_t* delayTime){
 
 
 
-
-
-
 void manual(uint32_t* delayTime){
-  for (int i = 0 ; i <= ledCntrl.ledCount ; i++){
-    ledCntrl.setUserColor(i, uRed, uGreen, uBlue); //
-  }
-  
-  *delayTime = 5; 
-}
-
-void custom(uint32_t* delayTime){
-  ledCntrl.setUserColor(uCustomNum, uRed, uGreen, uBlue); //
   *delayTime = 5; 
 }
 

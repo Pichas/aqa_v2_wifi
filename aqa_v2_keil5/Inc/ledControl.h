@@ -60,8 +60,9 @@ uint8_t getEffectCount(void);
 //led control
 ledsArray* init(uint16_t ledCount); //функция инициализации массива и вообще всего управления лентой
 ledsArray* getLedControl(void); //получить указатель на массив, если гдето потеряли и тд
-void setUserParams(uint16_t num, uint8_t red, uint8_t green, uint8_t blue);
 
+void setOneColor(uint8_t red, uint8_t green, uint8_t blue);
+void setOneLedColor(uint16_t num, uint8_t red, uint8_t green, uint8_t blue);
 
 #ifdef __cplusplus
 }
