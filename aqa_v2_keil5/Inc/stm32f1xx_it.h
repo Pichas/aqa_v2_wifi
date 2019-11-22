@@ -47,11 +47,11 @@
 #include "ledcontrol.h"
 /* Exported types ------------------------------------------------------------*/
 typedef enum {
-  OFF_0 = '1',
-  ON_0 = '2',
-  OFF_1 = '3',
-  ON_1 = '4',
-  SET_EFFECT = '5',
+  OFF_0 = 1,
+  ON_0 = 2,
+  OFF_1 = 3,
+  ON_1 = 4,
+  SET_EFFECT = 5,
   ERROR_TYPE = 0xFF
 }timerType;
 
