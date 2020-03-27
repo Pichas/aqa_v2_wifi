@@ -6,39 +6,39 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-//    device.reset(new driver(this));
-    device = new DeviceSM();
-    tDevice = new QThread();
-    device->moveToThread(tDevice);
-    connect(tDevice, &QThread::started, device, &DeviceSM::start);
+
+    m_device = new DeviceSM();
+    m_tDevice = new QThread();
+    m_device->moveToThread(m_tDevice);
+    connect(m_tDevice, &QThread::started, m_device, &DeviceSM::start);
 
 
-    ui->tvAllTimers->setModel(device->timersModel());
+    ui->tvAllTimers->setModel(m_device->timersModel());
     ui->tvAllTimers->setColumnWidth(0,40);
     ui->tvAllTimers->setColumnWidth(1,50);
-    ui->tvAllTimers->setColumnWidth(2,150);
+    ui->tvAllTimers->setColumnWidth(2,160);
     ui->tvAllTimers->setColumnWidth(3,250);
     ui->tvAllTimers->setColumnWidth(4,10);
 
 
-    connect(device, &DeviceSM::sendStatus, ui->statusBar, &QStatusBar::showMessage);
-    connect(device, &DeviceSM::ready, this, &MainWindow::refreshActions);
+    connect(m_device, &DeviceSM::sendStatus, ui->statusBar, &QStatusBar::showMessage);
+    connect(m_device, &DeviceSM::ready, this, &MainWindow::refreshActions);
 
     connect(ui->pbExport,  &QPushButton::clicked, this, &MainWindow::exportTimers);
     connect(ui->pbImport,  &QPushButton::clicked, this, &MainWindow::importTimers);
 
     connect(ui->actIPPort, &QAction::triggered, this, &MainWindow::setIPPort);
-    connect(ui->actConnect, &QAction::triggered, [&]{tDevice->start();});
+    connect(ui->actConnect, &QAction::triggered, [&]{m_tDevice->start();});
 
-    connect(ui->tbSyncTime, &QToolButton::clicked, [&]{device->setDateTime();});
+    connect(ui->tbSyncTime, &QToolButton::clicked, [&]{m_device->setDateTime();});
 
-    connect(ui->actRelay0, &QAction::triggered, [&](int ch){device->setRelay(0,ch);});
-    connect(ui->actRelay1, &QAction::triggered, [&](int ch){device->setRelay(1,ch);});
+    connect(ui->actRelay0, &QAction::triggered, [&](int ch){m_device->setRelay(0,ch);});
+    connect(ui->actRelay1, &QAction::triggered, [&](int ch){m_device->setRelay(1,ch);});
 
-    connect(ui->cbEnTimers, &QCheckBox::clicked, [&](int ch){device->setEnTimers(ch);});
+    connect(ui->cbEnTimers, &QCheckBox::clicked, [&](int ch){m_device->setEnTimers(ch);});
 
     //effects
-    for (QString name : device->effectsName()){
+    for (QString name : m_device->effectsName()){
         QAction* act = new QAction(name, ui->menuEff);
         act->setCheckable(true);
         connect(act, &QAction::triggered, this, &MainWindow::setEffect);
@@ -48,7 +48,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actSetUserColor,&QAction::triggered, [&]{
             static QColor color = Qt::white;
             color = QColorDialog::getColor(color, this, "Выбор цвета");
-            device->setOneColor(color.toRgb().red(), color.toRgb().green(), color.toRgb().blue());
+            m_device->setOneColor(color.toRgb().red(), color.toRgb().green(), color.toRgb().blue());
             ui->menuColor->setStyleSheet("QMenu::item { background: " + color.name() + "; }");
         });
 
@@ -57,18 +57,18 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //timers
     connect(ui->pbAddTimer, &QPushButton::clicked, [&]{
-        QScopedPointer<addTimerWin> win(new addTimerWin(device));
+        QScopedPointer<addTimerWin> win(new addTimerWin(m_device));
         win->exec();
     });
 
     connect(ui->tvAllTimers, &QTableView::doubleClicked, [&](QModelIndex x){
-        QScopedPointer<addTimerWin> win(new addTimerWin(device, x.siblingAtColumn(0).data().toInt()));
+        QScopedPointer<addTimerWin> win(new addTimerWin(m_device, x.siblingAtColumn(0).data().toInt()));
         win->exec();
     });
 
     connect(ui->pbDelTimer, &QPushButton::clicked, [&]{
         if (ui->tvAllTimers->selectionModel() && ui->tvAllTimers->selectionModel()->hasSelection())
-            device->removeTimer(ui->tvAllTimers->selectionModel()->selectedRows().at(0).data().toInt());
+            m_device->removeTimer(ui->tvAllTimers->selectionModel()->selectedRows().at(0).data().toInt());
     });
 
 
@@ -109,7 +109,7 @@ void MainWindow::setIPPort()
 
     bool ok;
     QString text = QInputDialog::getText(this, "Указать подключение",
-                                         tr("IP:Port"), QLineEdit::Normal,
+                                         "IP:Port", QLineEdit::Normal,
                                          IP + ":" + QString::number(Port), &ok);
     if (ok && !text.isEmpty()){
         SETTING_INI->setValue("CONNECT/IP", text.split(":").at(0));
@@ -120,11 +120,10 @@ void MainWindow::setIPPort()
 
 void MainWindow::uploadToDevice()
 {
-    if (allLeds.isEmpty()) return;
+    if (m_allLeds.isEmpty()) return;
 
-    for (int i = 0 ; i < allLeds.count() ; i++){
-        QColor c = allLeds.value(allLeds.keys().at(i));
-        device->setOneLedColor(allLeds.keys().at(i)->text().toInt(), c.red(), c.green(),c.blue());
+    for (int i = 0 ; i < m_allLeds.count() ; i++){
+        m_device->setOneLedColor(m_allLeds.keys().at(i)->text().toInt(), m_allLeds.value(m_allLeds.keys().at(i)));
     }
 }
 
@@ -132,25 +131,25 @@ void MainWindow::uploadToDevice()
 
 void MainWindow::refreshActions()
 {
-    ui->cbEnTimers->setChecked(device->isEnTimers());
-    ui->actRelay0->setChecked(device->relay(0));
-    ui->actRelay1->setChecked(device->relay(1));
+    ui->cbEnTimers->setChecked(m_device->isEnTimers());
+    ui->actRelay0->setChecked(m_device->relay(0));
+    ui->actRelay1->setChecked(m_device->relay(1));
 
     for (QAction* act : ui->menuEff->actions())
-        act->setChecked(act->text() == device->curEffect());
+        act->setChecked(act->text() == m_device->curEffect());
 
-    ui->lTime->setText(device->dateTime());
+    ui->lTime->setText(m_device->dateTime());
 }
 
 void MainWindow::exportTimers()
 {
 
     QString fileName = QFileDialog::getSaveFileName(this,
-                                                    tr("Открыть файл с таймерами"),
+                                                    "Открыть файл с таймерами",
                                                     QDir::homePath(),
-                                                    tr("Файл таймеров (*.tim);;Все файлы (*)"));
+                                                    "Файл таймеров (*.tim);;Все файлы (*)");
 
-    if(device->exportTimers(fileName)){
+    if(m_device->exportTimers(fileName)){
         QMessageBox::warning(nullptr, "Экспорт таймеров", "Ошибка экспорта");
     }else{
         QMessageBox::information(nullptr, "Экспорт таймеров", "Экспорт завершен успешно");
@@ -160,11 +159,11 @@ void MainWindow::exportTimers()
 void MainWindow::importTimers()
 {
     QString fileName = QFileDialog::getOpenFileName(this,
-                                tr("Открыть файл с таймерами"),
+                                "Открыть файл с таймерами",
                                 QDir::homePath(),
-                                tr("Файл таймеров (*.tim);;Все файлы (*)"));
+                                "Файл таймеров (*.tim);;Все файлы (*)");
 
-    if(device->importTimers(fileName)){
+    if(m_device->importTimers(fileName)){
         QMessageBox::warning(nullptr, "Импорт таймеров", "Ошибка импорта");
     }else{
         QMessageBox::information(nullptr, "Импорт таймеров", "Импорт завершен успешно");
@@ -188,8 +187,10 @@ void MainWindow::makeMatrix()
 
     for (int i = ui->sbStart->value() ; i < ui->sbCount->value() ; i++){
         QPushButton* b = new QPushButton(QString::number(i), this);
-        allLeds.insert(b, QColor(Qt::black));
+        m_allLeds.insert(b, QColor(Qt::black));
         b->setFixedSize(btnSize);
+        b->setFlat(true);
+        b->setStyleSheet("QPushButton{ background-color: #000000; color: #555555; border: 0px;} QPushButton:hover{color: #FFFFFF;  border: 0px;}");
 
         connect(b, &QPushButton::clicked, this, &MainWindow::setLedColor);
 
@@ -209,15 +210,15 @@ void MainWindow::makeMatrix()
 
 void MainWindow::delMatrix()
 {
-    while(allLeds.count() > 0){
-        allLeds.firstKey()->deleteLater();
-        allLeds.remove(allLeds.firstKey());
+    while(m_allLeds.count() > 0){
+        m_allLeds.firstKey()->deleteLater();
+        m_allLeds.remove(m_allLeds.firstKey());
     }
 }
 
 void MainWindow::setEffect()
 {
-    device->setEffect(qobject_cast<QAction*>(QObject::sender())->text());
+    m_device->setEffect(qobject_cast<QAction*>(QObject::sender())->text());
 }
 
 
@@ -227,96 +228,101 @@ void MainWindow::setLedColor()
 {
     QPushButton* b = qobject_cast<QPushButton*> (QObject::sender());
 
-    allLeds[b] = brushColor;
-    b->setStyleSheet("background: " + brushColor.name() + ";");
-    device->setOneLedColor(b->text().toInt(), allLeds[b].red(), allLeds[b].green(), allLeds[b].blue());
+    m_allLeds[b] = m_brushColor;
+    QColor textColor;
+    if (m_brushColor.red() < 0xC0 && m_brushColor.green() < 0xC0 && m_brushColor.blue() < 0xC0)
+        textColor = Qt::white;
+    else
+        textColor = Qt::black;
+
+    b->setStyleSheet("QPushButton{ background-color: " + m_brushColor.name() + "; color: " + m_brushColor.name() + "; border: 0px;} QPushButton:hover{color: " + textColor.name() + ";  border: 0px;}");
+
+    m_device->setOneLedColor(b->text().toInt(), m_allLeds[b]);
 }
 
 void MainWindow::pickBrushColor()
 {
     QPushButton* b = qobject_cast<QPushButton*> (QObject::sender());
 
-    QColor returnColor = QColorDialog::getColor(brushColor, this, "Выбор цвета");
-    if (returnColor.isValid()) brushColor = returnColor;
-    b->setStyleSheet("background: " + brushColor.name() + ";");
+    QColor returnColor = QColorDialog::getColor(m_brushColor, this, "Выбор цвета");
+    if (returnColor.isValid()) m_brushColor = returnColor;
+    b->setStyleSheet("background: " + m_brushColor.name() + ";");
 }
 
 void MainWindow::exportLedMap()
 {
-    if(allLeds.isEmpty()) return;
+    if(m_allLeds.isEmpty()) return;
 
     QString fileName = QFileDialog::getSaveFileName(this,
                                                     tr("Открыть файл с картой"),
                                                     QDir::homePath(),
                                                     tr("Файл карт (*.map);;Все файлы (*)"));
 
-    if (!fileName.isEmpty()){
-        QFile file(fileName);
-        if(file.open(QIODevice::WriteOnly)){
-            QDataStream stream(&file);
-            stream.setVersion(QDataStream::Qt_4_2);
+    if (fileName.isEmpty()) return;
 
-            stream << QString("Аквариумная карта");
-            stream << allLeds.count(); //записать количество записей
+    QFile file(fileName);
+    if(!file.open(QIODevice::WriteOnly)) return;
 
+    QDataStream stream(&file);
+    stream.setVersion(QDataStream::Qt_4_2);
 
-            for (QPushButton* b : allLeds.keys()){
-                stream << b->text() << allLeds[b];
-            }
+    stream << QString("Аквариумная карта");
+    stream << m_allLeds.count(); //записать количество записей
 
-            if(stream.status() != QDataStream::Ok){
-                QMessageBox::warning(nullptr, "Экспорт карты", "Ошибка экспорта");
-            }else{
-                QMessageBox::information(nullptr, "Экспорт карты", "Экспорт завершен успешно");
-            }
-        }
-        file.close();
+    for (QPushButton* b : m_allLeds.keys()){
+        stream << b->text() << m_allLeds[b];
     }
 
+    if(stream.status() != QDataStream::Ok){
+        QMessageBox::warning(nullptr, "Экспорт карты", "Ошибка экспорта");
+    }else{
+        QMessageBox::information(nullptr, "Экспорт карты", "Экспорт завершен успешно");
+    }
+
+    file.close();
 }
 
 void MainWindow::importLedMap()
 {
-    if(allLeds.isEmpty()) return;
+    if(m_allLeds.isEmpty()) return;
 
     QString fileName = QFileDialog::getOpenFileName(this,
                                 tr("Открыть файл с картой"),
                                 QDir::homePath(),
                                 tr("Файл карт (*.map);;Все файлы (*)"));
-    if (!fileName.isEmpty()){
-        QFile file(fileName);
-        if(file.open(QIODevice::ReadOnly)){
+    if (fileName.isEmpty()) return;
 
-            QDataStream stream(&file);
-            stream.setVersion (QDataStream::Qt_4_2) ;
+    QFile file(fileName);
+    if(!file.open(QIODevice::ReadOnly)) return;
 
-            QString check;
-            stream >> check;
-            if (check != "Аквариумная карта") {
-                QMessageBox::warning(nullptr, "Импорт карты", "Это не файл карт");
-                return;
-            }
+    QDataStream stream(&file);
+    stream.setVersion (QDataStream::Qt_4_2) ;
 
-            int dataCount;
-            stream >> dataCount;
-
-            for (int i = 0; i < dataCount ; i++){
-                QString ledName;
-                stream >> ledName;
-                for (QPushButton* b : allLeds.keys()){
-                    if (b->text() == ledName){
-                        stream >> allLeds[b];
-                        b->setStyleSheet("background: " + allLeds[b].name() + ";");
-                    }
-                }
-                QCoreApplication::processEvents();
-            }
-
-            if(stream.status() != QDataStream::Ok){
-                QMessageBox::warning(nullptr, "Импорт карты", "Ошибка импорта");
-            }
-            file.close();
-        }
+    QString check;
+    stream >> check;
+    if (check != "Аквариумная карта") {
+        QMessageBox::warning(nullptr, "Импорт карты", "Это не файл карт");
+        return;
     }
+
+    int dataCount;
+    stream >> dataCount;
+
+    for (int i = 0; i < dataCount ; i++){
+        QString ledName;
+        stream >> ledName;
+        for (QPushButton* b : m_allLeds.keys()){
+            if (b->text() == ledName){
+                stream >> m_brushColor;
+                b->click();// apply color
+            }
+        }
+        QCoreApplication::processEvents();
+    }
+
+    if(stream.status() != QDataStream::Ok){
+        QMessageBox::warning(nullptr, "Импорт карты", "Ошибка импорта");
+    }
+    file.close();
 }
 

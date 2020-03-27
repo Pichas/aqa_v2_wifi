@@ -9,7 +9,7 @@ addTimerWin::addTimerWin(DeviceSM *device, int num, QWidget *parent) :
     m_dev = device;
     m_num = num;
 
-    if (num >= 0) this->setWindowTitle("Изменить таймер");
+    if (num >= 0) this->setWindowTitle("Изменить таймер №" + QString::number(num));
 
 
     ui->cbAction->addItems(m_dev->actionsName());

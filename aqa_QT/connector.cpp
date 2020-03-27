@@ -76,5 +76,7 @@ void Connector::stateChanged(QAbstractSocket::SocketState socketState)
     case QAbstractSocket::ClosingState:
         emit sendState("Отключено от " + m_mUrl.host() + ":" + QString::number(m_mUrl.port()), 0);
         break;
+    default:
+        break;
     }
 }

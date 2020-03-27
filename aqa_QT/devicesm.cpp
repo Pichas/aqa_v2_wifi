@@ -59,8 +59,8 @@ DeviceSM::DeviceSM(QObject *parent) : QObject(parent)
     m_timers->setEffects(&m_effects);
     connect(m_timers, &TimersModelTable::sendTimerData, this, &DeviceSM::importTimer);
 
-    sortedModel = new QSortFilterProxyModel();
-    sortedModel->setSourceModel(m_timers);
+    m_sortedModel = new QSortFilterProxyModel();
+    m_sortedModel->setSourceModel(m_timers);
 
 
 
@@ -89,7 +89,7 @@ DeviceSM::~DeviceSM()
     m_periodAddElemToQtimer->deleteLater();
     m_wDog->stop();
     m_wDog->deleteLater();
-    sortedModel->deleteLater();
+    m_sortedModel->deleteLater();
     m_timers->deleteLater();
 }
 
@@ -127,7 +127,7 @@ QString DeviceSM::actionName(char num) const
 
 QSortFilterProxyModel* DeviceSM::timersModel() const
 {
-    return sortedModel;
+    return m_sortedModel;
 }
 
 bool DeviceSM::exportTimers(QString fileName)
@@ -145,31 +145,36 @@ void DeviceSM::setDateTime()
     QString dt = "S" + QDateTime::currentDateTime().toString("HHmmssddMMyy") +
             QString::number(QDate::currentDate().dayOfWeek());
 
-    m_qData.enqueue(dt);
+    m_qData.prepend(dt);
 }
 
 void DeviceSM::setRelay(uint8_t num, bool state)
 {
-    m_qData.enqueue("X" + QString::number(num) + QString::number(state));
+    m_qData.prepend("X" + QString::number(num) + QString::number(state));
 }
 
 void DeviceSM::setEffect(QString effect)
 {
-    m_qData.enqueue("I" + QString(m_effects.value(effect)));
+    m_qData.prepend("I" + QString(m_effects.value(effect)));
+}
+
+void DeviceSM::setOneLedColor(uint16_t n, QColor color)
+{
+    setOneLedColor(n, color.red(), color.green(), color.blue());
 }
 
 void DeviceSM::setOneLedColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
 {
     QString buf;
     buf.sprintf("M%03d%03d%03d%03d", n, r, g, b);
-    m_qData.enqueue(buf);
+    m_qData.enqueue(buf); //add to tail
 }
 
 void DeviceSM::setOneColor(uint8_t r, uint8_t g, uint8_t b)
 {
     QString buf;
     buf.sprintf("N%03d%03d%03d", r, g, b);
-    m_qData.enqueue(buf);
+    m_qData.prepend(buf);
 }
 
 void DeviceSM::addTimer(QTime time, uint8_t dow, QString act, QString ef)
@@ -182,14 +187,14 @@ void DeviceSM::addTimer(QTime time, uint8_t dow, QString act, QString ef)
     str.append(m_actions.value(act, '0'));
     str.append(m_effects.value(ef, '0'));
 
-    m_qData.enqueue(str);
+    m_qData.prepend(str);
 }
 
 void DeviceSM::removeTimer(uint8_t n)
 {
     QString buf;
     buf.sprintf("R%02d", n);
-    m_qData.enqueue(buf);
+    m_qData.prepend(buf);
 }
 
 void DeviceSM::editTimer(QTime time, uint8_t dow, QString act, QString ef, uint8_t n)
@@ -206,18 +211,18 @@ void DeviceSM::editTimer(QTime time, uint8_t dow, QString act, QString ef, uint8
     str.append(m_effects.value(ef, '0'));
     str.append(buf);
 
-    m_qData.enqueue(str);
+    m_qData.prepend(str);
 }
 
 void DeviceSM::setEnTimers(uint8_t b)
 {
-    m_qData.enqueue("J" + QString::number(b).toLatin1());
+    m_qData.prepend("J" + QString::number(b).toLatin1());
 }
 
 void DeviceSM::loadTimers()
 {
     m_timers->clear();
-    m_qData.enqueue("T00");
+    m_qData.prepend("T00");
 }
 
 bool DeviceSM::relay(uint8_t num) const
@@ -286,7 +291,7 @@ void DeviceSM::stParseAnswer()
                 answer[7].toLatin1());
         QString buf;
         buf.sprintf("T%02d", m_timers->rowCount());
-        m_qData.enqueue(buf);
+        m_qData.prepend(buf);
     }
 
     if (answer.at(0) == 'R' || answer.at(0) == 'A' || answer.at(0) == 'C'){
@@ -316,7 +321,7 @@ void DeviceSM::importTimer(QTime time, char dow, char act, char ef)
     str.append(act);
     str.append(ef);
 
-    m_qData.enqueue(str);
+    m_qData.prepend(str);
 }
 
 void DeviceSM::addNewData()

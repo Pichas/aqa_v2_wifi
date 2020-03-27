@@ -8,6 +8,7 @@
 #include <QThread>
 #include <QDebug>
 #include <QSortFilterProxyModel>
+#include <QColor>
 
 
 #include "connector.h"
@@ -24,6 +25,7 @@ public:
     void setDateTime();
     void setRelay(uint8_t num, bool state);
     void setEffect(QString effect);
+    void setOneLedColor(uint16_t n, QColor color);
     void setOneLedColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b);
     void setOneColor(uint8_t r, uint8_t g, uint8_t b);
     void addTimer(QTime time, uint8_t dow, QString act, QString ef);
@@ -63,7 +65,7 @@ private:
     char m_effectIndex;
     QString m_DateTime;
     TimersModelTable *m_timers;
-    QSortFilterProxyModel *sortedModel;
+    QSortFilterProxyModel *m_sortedModel;
 
 
     QMap<QString, char> m_actions;

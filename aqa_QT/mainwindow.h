@@ -13,6 +13,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QDir>
+#include <QGraphicsDropShadowEffect>
 
 
 
@@ -37,14 +38,14 @@ private:
 
 
     void setIPPort();
-    DeviceSM *device;
-    QThread* tDevice;
+    DeviceSM *m_device;
+    QThread* m_tDevice;
 
     void makeMatrix();
     void delMatrix();
-    QMap<QPushButton*, QColor> allLeds;
+    QMap<QPushButton*, QColor> m_allLeds;
 
-    QColor brushColor;
+    QColor m_brushColor;
 
 
 private slots:
